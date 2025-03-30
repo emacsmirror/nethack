@@ -1,3 +1,10 @@
+2025-03-31  George Huebner  <george@feyor.sh>
+
+	* enh-367.patch: Init.
+	* nethack-api.el (nh-attr-face): Correctly handle faces as input.
+        (nethack-options-status-hilite): Fix access of hilite-case2.
+        (nethack-options-equal): Return a string.
+
 2022-06-01  Benjamin Yang  <be11ng@protonmail.com>
 
 	* nethack-api.el (nhapi-raw-print-bold): Pass a symbol to

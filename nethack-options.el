@@ -113,8 +113,8 @@ ATTR can be either a string or a symbol.  It does not matter if it is prefixed
 However, ATTR should be a symbol.  As of 0.13.0, the C half should give a symbol
   which correctly resolves to an attribute, but this function is left for
   compatibility."
-  (if (and (symbolp attr) (facep attr))
-      attr
+  (if (facep attr)
+      (facep attr)
     (when (symbolp attr)
       (setq attr (symbol-name attr)))
     (when (string-prefix-p "atr-" attr)
@@ -380,7 +380,7 @@ It can check these options, though it doesn't make sense to."
   (cl-assert (stringp op))
   (if-let ((val (member op nethack-options)))
       (car val)
-    (assoc op nethack-options)))
+    (cadr (assoc op nethack-options))))
 
 (defun nethack-options-equal (a b)
   "Check if two hilite names are quivalent.
@@ -413,7 +413,7 @@ is done automatically, so “Stone” will match to “major”."
          (lambda (hilite)
            (let* ((hilite-name (car hilite))
                   (hilite-case1 (cadr hilite))
-                  (hilite-case2 (cddr hilite))
+                  (hilite-case2 (nth 2 hilite))
                   (hilite-behavior1 (cdar hilite-case1)))
              (cond
               ;; always
