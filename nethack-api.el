@@ -359,7 +359,7 @@ accessed 2021-04-23.")
             (delete-char 1)
             (insert-image (elt nh-tile-vector tile))))
       (cond
-       ((nethack-options-set-p 'DECgraphics)
+       ((or (nethack-options-set-p 'DECgraphics) (string= "DECgraphics" (nethack-options-set-p 'symset)))
         (nh-gamegrid-set-cell
          x y
          ;; For DECgraphics, lower-case letters with high bit set mean switch
@@ -372,7 +372,7 @@ accessed 2021-04-23.")
                           nethack-dec-graphics-char))
                ch))
          ch))
-       ((nethack-options-set-p 'IBMgraphics)
+       ((or (nethack-options-set-p 'IBMgraphics) (string= "IBMgraphics" (nethack-options-set-p 'symset)))
         (nh-gamegrid-set-cell x y (decode-char 'cp437 ch) ch))
        (t (nh-gamegrid-set-cell x y ch)))
       ;; If the glyph is a pet then color it with the
