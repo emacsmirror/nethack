@@ -56,6 +56,8 @@
 (defvar nh-raw-print-buffer-name "*nhw raw-print*"
   "Buffer name for Nethack raw-print messages.")
 
+(defvar nh--window-configuration-before nil)
+
 (defun nhapi-raw-print (str)
   (save-current-buffer
     (let ((buffer (get-buffer-create nh-raw-print-buffer-name)))
@@ -833,32 +835,41 @@ the menu is dismissed."
 (defun nhapi-restore-window-configuration ()
   "Layout the nethack windows according to the values
 `nethack-status-window-height' and `nethack-message-window-height'."
-  ;; By nethack 3.6.6, the nhapi-create-map-window and
-  ;; nhapi-create-inventory-window are called after
-  ;; nhapi-restore-window-configuration. This may be an issue within the source
-  ;; and it may be possible to patch it there, but patching it here is easier.
-  (nhapi-create-map-window)             ; We don't need an if, since these
-  (nhapi-create-inventory-window 3)     ; already have a check for duplicates.
-  (let ((window-min-height (min nethack-status-window-height
-                                nethack-message-window-height))
-        other-window)
-    (cl-case nethack-message-style
-      (:map)
-      (t
-       (switch-to-buffer nh-message-buffer)
-       (split-window-vertically nethack-message-window-height)
-       (setq other-window t)))
-    (if other-window
-        (switch-to-buffer-other-window nh-map-buffer)
-      (switch-to-buffer nh-map-buffer))
-    (cl-case nethack-status-style
-      ((:map :mode-line :header-line))
-      (t
-       (switch-to-buffer nh-status-buffer)
-       (split-window-vertically (- nethack-status-window-height))
-       (switch-to-buffer nh-map-buffer)))
-    (when (buffer-live-p nh-active-menu-buffer)
-      (pop-to-buffer nh-active-menu-buffer))))
+  (unless nh--window-configuration-before
+  (setq nh--window-configuration-before (window-state-get)))
+
+  (set-window-dedicated-p (selected-window) nil)
+  (delete-other-windows)
+
+  (let* ((w-left (selected-window))
+         (w-right (split-window-horizontally (floor (* 0.6 (window-width)))))
+     (w-status (split-window-vertically (floor (* 0.95 (window-body-height)))))
+     (w-inventory (progn (select-window w-right) (split-window-vertically (floor (* 0.4 (window-body-height))))))
+         (w-map w-left)
+         (w-message w-right))
+
+    ;; By nethack 3.6.6, the nhapi-create-map-window and
+    ;; nhapi-create-inventory-window are called after
+    ;; nhapi-restore-window-configuration. This may be an issue within the source
+    ;; and it may be possible to patch it there, but patching it here is easier.
+    (nhapi-create-map-window)             ; We don't need an if, since these
+    (nhapi-create-inventory-window 3)     ; already have a check for duplicates.
+
+    (set-window-buffer w-inventory nh-inventory-buffer)
+    (set-window-dedicated-p w-inventory nil)
+    (set-window-buffer w-map nh-map-buffer)
+    (set-window-dedicated-p w-map nil)
+    (set-window-buffer w-message nh-message-buffer)
+    (set-window-dedicated-p w-message nil)
+    (set-window-buffer w-status nh-status-buffer)
+    (set-window-dedicated-p w-status t)
+    (window-preserve-size w-status nil t)
+
+    (with-current-buffer nh-status-buffer
+      (setq mode-line-format nil))
+
+    (select-window w-map)))
+
 
 (defun nhapi-bell ()
   "Beep at user."
@@ -883,6 +894,9 @@ the menu is dismissed."
 
 (defun nhapi-end ()
   (message "Goodbye.")
+  (when nh--window-configuration-before
+    (window-state-put nh--window-configuration-before)
+    (setq nh--window-configuration-before nil))
   ;; Prevent a memory leak
   (clrhash nethack-options-status-hilite-results)
   (run-hooks 'nethack-end-hook))

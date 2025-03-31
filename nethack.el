@@ -779,8 +779,7 @@ buffer."
   (when (buffer-live-p nh-map-buffer)
     (kill-buffer nh-map-buffer))        ; Preserve window for raw-print goodbye
   (dolist (buffer (list nh-status-buffer nh-message-buffer))
-    (with-current-buffer buffer
-      (kill-buffer-and-window)))
+    (kill-buffer buffer))
   (mapc (lambda (x) (when (buffer-live-p (cdr x))
                       (kill-buffer (cdr x))))
         nh-menu-buffer-table)
