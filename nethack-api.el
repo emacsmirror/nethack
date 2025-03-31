@@ -200,6 +200,16 @@ See ‘nh-status-attributes’ for details on the format.")
                 (concat c " "))))
           nh-status-conditions
           ""))
+        ((and (string-equal (car stat) "title") (nethack-options-set-p 'hitpointbar))
+         (let ((title-str (nth 1 (assoc "title" nh-status-attributes))))
+           (when-let* ((hp-attr (assoc "hitpoints" nh-status-attributes))
+                       (hp-face (car (mapcan (lambda (f)
+                                          (apply (copy-tree f) (cdr hp-attr)))
+                                        (nethack-options-status-hilite "hitpoints"))))
+                       (hp-percent (nth 3 hp-attr)))
+             (put-text-property 0 (length title-str) 'face nil title-str)
+             (put-text-property 0 (floor (* (length title-str) (/ hp-percent 100.0))) 'face `(:inherit ,hp-face :inverse-video t) title-str))
+           (concat "[" title-str "] ")))
         (stat
          (nh-propertize-attribute
           (assoc (car stat) nh-status-attributes)

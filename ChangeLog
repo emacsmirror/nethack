@@ -1,5 +1,16 @@
 2025-03-31  George Huebner  <george@feyor.sh>
 
+        * nethack-api.el (nhapi-print-glyph): Support the symset option in
+	addition to the backwards-compatible IBMgraphics and DECgraphics
+	options.
+        (nhapi-restore-window-configuration): Restore previous window
+	layout when quitting, change default layout and dedicate windows
+	to certain UI elements.
+        (nh-status-string): Support OPTIONS=hitpointbar by applying
+	hilite_status:hitpoints to title.
+
+2025-03-31  George Huebner  <george@feyor.sh>
+
 	* enh-367.patch: Init.
 	* nethack-api.el (nh-attr-face): Correctly handle faces as input.
         (nethack-options-status-hilite): Fix access of hilite-case2.
