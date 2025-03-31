@@ -41,6 +41,7 @@
 (defvar nh-map-buffer nil)
 (defvar nh-status-buffer nil)
 (defvar nh-message-buffer nil)
+(defvar nh-inventory-buffer nil)
 (defvar nh-menu-buffer-table nil
   "An alist of (DIGIT-ID . BUFFER) pairs")
 (defun nh-menu-buffer (menuid)
@@ -560,9 +561,11 @@ all of the appropriate setup."
 
 (defun nhapi-create-inventory-window (menuid)
   "Create the inventory window."
-  (when (not (buffer-live-p (assq menuid nh-menu-buffer-table)))
-    ;; Only do if that menuid doesn't exist
-    (nhapi-create-menu-window menuid)))
+  (when (not (buffer-live-p nh-inventory-buffer))
+  (with-current-buffer (nhapi-create-menu 'menu menuid)
+    (rename-buffer "*nethack inventory*")
+    (setq buffer-read-only t)
+    (setq nh-inventory-buffer (current-buffer)))))
 
 (defun nhapi-create-menu-window (menuid)
   "Create a menu window."
