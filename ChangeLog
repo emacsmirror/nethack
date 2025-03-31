@@ -1,5 +1,11 @@
 2025-03-31  George Huebner  <george@feyor.sh>
 
+        * nethack-api.el (nhapi-select-menu): Track the inventory window
+	and update if OPTIONS=perm_invent is true.
+	* enh-367.patch: Update accordingly.
+
+2025-03-31  George Huebner  <george@feyor.sh>
+
         * nethack-api.el (nhapi-print-glyph): Support the symset option in
 	addition to the backwards-compatible IBMgraphics and DECgraphics
 	options.

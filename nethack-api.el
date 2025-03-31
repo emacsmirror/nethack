@@ -488,7 +488,6 @@ Do not edit the value of this variable.  Instead, change the value of
   "If non-nil, at the next command prompt, update the menu.")
 
 (defun nhapi-update-inventory ()
-  ;; FIXME: properly(?) implement perm-inven
   (setq nh-inventory-need-update t))
 
 (defun nhapi-doprev-message ()
@@ -564,6 +563,7 @@ all of the appropriate setup."
   (when (not (buffer-live-p nh-inventory-buffer))
   (with-current-buffer (nhapi-create-menu 'menu menuid)
     (rename-buffer "*nethack inventory*")
+    (nh-menu-mode nil)
     (setq buffer-read-only t)
     (setq nh-inventory-buffer (current-buffer)))))
 
@@ -823,14 +823,21 @@ buffer."
 Saves the current window configuration so that it can be restored when
 the menu is dismissed."
   (let ((buffer (nh-menu-buffer menuid)))
-    (if buffer
+    (unless buffer (error "No such menuid: %d" menuid))
+    (if nh-inventory-need-update
+        (progn
+          (setq nh-inventory-need-update nil)
+          (nh-send nil))
         (progn
           (setq nh-window-configuration (current-window-configuration))
           ;; Use the window displaying the message buffer for the menu
           ;; buffer, if possible.
           (let ((message-window (and nh-message-buffer
-                                     (get-buffer-window nh-message-buffer))))
-            (if (not message-window)
+                                     (get-buffer-window nh-message-buffer)))
+                (inventory-window (and nh-inventory-buffer
+                                       (get-buffer-window nh-inventory-buffer))))
+            (if (or (and inventory-window (equal buffer nh-inventory-buffer))
+                    (not message-window))
                 (pop-to-buffer (nh-menu-buffer menuid) nil t)
               (select-window message-window)
               (switch-to-buffer (nh-menu-buffer menuid) t)))
@@ -842,8 +849,7 @@ the menu is dismissed."
           (nh-menu-mode how)
           (goto-char (point-min))
           (message "Displaying menu")
-          (setq nh-active-menu-buffer buffer))
-      (error "No such menuid: %d" menuid))))
+          (setq nh-active-menu-buffer buffer)))))
 
 (defun nhapi-restore-window-configuration ()
   "Layout the nethack windows according to the values
