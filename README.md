@@ -20,7 +20,7 @@ All of the Elisp is GPLv2, and the patches are under the modified 3-clause BSD.
 
 ## Background
 
-This is a fork of `nethack-el` where I attempt to update it to 3.6.6.
+This is a fork of `nethack-el` where I attempt to update it to 3.6.~~6~~7.
 
 Looked pretty dead when I first stumbled upon it, and also incompatible with
 anything newer than 3.4.3.  This is my go at making it work again.
