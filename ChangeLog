@@ -1,5 +1,11 @@
 2025-03-31  George Huebner  <george@feyor.sh>
 
+        * nethack.el: Make letter case consistent.
+        * nethack-api.el: Likewise.
+	(nhapi-display-file): Try reading helpfiles from nhdat.
+
+2025-03-31  George Huebner  <george@feyor.sh>
+
         * nethack-api.el (nhapi-select-menu): Track the inventory window
 	and update if OPTIONS=perm_invent is true.
 	* enh-367.patch: Update accordingly.

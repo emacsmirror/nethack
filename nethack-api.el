@@ -664,8 +664,7 @@ The TYPE argument is legacy and serves no real purpose."
   "Major mode for Nethack menus.
 
 \\{nh-menu-mode-map}"
-  (setq mode-name (concat "NETHACK MENU "
-                          (symbol-name how)))
+  (setq mode-name (string-join `("NetHack Menu" ,(when how (symbol-name how))) " "))
   (setq major-mode 'nh-menu-mode)
   (use-local-map nh-menu-mode-map)
   (setq nh-menu-how how)

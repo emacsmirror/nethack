@@ -632,7 +632,7 @@ The variable `nethack-program' is the name of the executable to run."
   (if (nethack-installed-p)
       (if (nethack-is-running)
           (progn
-            (message "Nethack process already running...")
+            (message "NetHack process already running...")
             (nhapi-restore-window-configuration))
         ;; Start the process.
         (when (get-buffer nh-proc-buffer-name)
@@ -754,7 +754,7 @@ delete the contents, perhaps logging the text."
 \\{nh-map-mode-map}"
   (use-local-map nh-map-mode-map)
   (set-syntax-table nh-map-mode-syntax-table)
-  (setq mode-name "NETHACK MAP")
+  (setq mode-name "NetHack Map")
   (setq major-mode 'nh-map-mode)
   ;; make scroll-other-window work on the message buffer
   (setq-local other-window-scroll-buffer nh-message-buffer)
@@ -763,12 +763,12 @@ delete the contents, perhaps logging the text."
   ;; TODO still need to figure out how to automatically scroll horizontally
   (run-hooks 'nethack-map-mode-hook))
 
-(define-derived-mode nh-message-mode text-mode "Nethack Messages"
+(define-derived-mode nh-message-mode text-mode "NetHack Messages"
   "Major mode for the Nethack message window"
   (setq buffer-read-only t))
 (put 'nh-message-mode 'mode-class 'special)
 
-(define-derived-mode nh-status-mode nil "Nethack Status"
+(define-derived-mode nh-status-mode nil "NetHack Status"
   "Major mode for the Nethack status window"
   (setq buffer-read-only t))
 (put 'nh-status-mode 'mode-class 'special)
