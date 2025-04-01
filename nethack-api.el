@@ -479,10 +479,19 @@ Do not edit the value of this variable.  Instead, change the value of
 `nethack-program'.")
 
 (defun nhapi-display-file (str complain)
-  (let ((file (concat nh-directory str)))
-    (if (file-exists-p file)
-        (view-file file)
-      (when complain (message "Cannot find file %s" file)))))
+  (if-let ((file (concat nh-directory str))
+           ((file-exists-p file)))
+      (view-file file)
+    (if-let* ((default-directory (make-temp-file "nh-dlb" t))
+              (nhdat-file (concat nh-directory "nhdat"))
+              (dlb-exe (cond ((locate-file "dlb" (list nh-directory)))
+                             ((car-safe (directory-files-recursively
+                                         (locate-dominating-file nh-directory (lambda (dir) (directory-files dir t "games"))) "dlb"))))))
+        (unless (or (ignore-errors
+                      (call-process dlb-exe nil nil nil "xf" nhdat-file str)
+                      (view-file str))
+                    (not complain))
+          (message "Cannot find file %s" str)))))
 
 (defvar nh-inventory-need-update nil
   "If non-nil, at the next command prompt, update the menu.")
