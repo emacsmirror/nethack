@@ -43,6 +43,7 @@
 (require 'nethack-keys)
 (require 'nethack-options)
 (require 'url)
+(require 'tramp)
 
 (defgroup nethack nil
   "Emacs lisp frontend to the lisp window port of Nethack 3.4.0."
@@ -406,6 +407,11 @@ See https://nethackwiki.com/wiki/Environment_variable for more information."
   :type '(repeat string)
   :group 'nethack)
 
+(defcustom nethack-wizmode nil
+  "Whether NetHack should be launched in wizard (debug) mode."
+  :type '(boolean)
+  :group 'nethack)
+
 (defcustom nethack-version
   "3.6.6"
   "The NetHack version to download, install, and bulid."
@@ -632,10 +638,12 @@ The variable `nethack-program' is the name of the executable to run."
         ;; Start the process.
         (when (get-buffer nh-proc-buffer-name)
           (kill-buffer nh-proc-buffer-name))
-        (nethack-start (let ((process-environment (append nethack-environment process-environment)))
-                         (apply 'start-process "nh" nh-proc-buffer-name
-                                nethack-program nethack-program-args))))
-    (nethack-install)))
+        (nethack-start (let ((process-environment (append (when nethack-wizmode `(,(concat "NETHACKOPTIONS=@" nethack-options-file))) nethack-environment process-environment))
+                             (default-directory (funcall (if (and nethack-wizmode (not (eq system-type 'windows-nt))) 'tramp-file-name-with-sudo 'identity) default-directory))
+                             (nethack-program-args (append (when nethack-wizmode '("-D" "-u" "wizard")) nethack-program-args)))
+                         (apply 'start-file-process "nh" nh-proc-buffer-name
+                                nethack-program nethack-program-args)))))
+  (nethack-install))
 
 (defun nethack-is-running ()
   "Return T if nethack is already running."
