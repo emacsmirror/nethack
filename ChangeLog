@@ -1,5 +1,11 @@
 2025-08-28  George Huebner  <george@feyor.sh>
 
+        * nethack-cmd.el (nethack-command-shell): Removed shell support to
+	make `!` work properly in getpos menus.
+        * nethack-keys.el (nh-map-mode-map): Update accordingly.
+
+2025-08-28  George Huebner  <george@feyor.sh>
+
         * nethack.el (nethack): Add `nethack-wizmode` option: this will
 	run NetHack with the debug flag using sudo (or doas) and will pass
 	the user's .nethackrc as an environment variable (put
