@@ -1,3 +1,10 @@
+2025-09-01  George Huebner  <george@feyor.sh>
+
+        * nethack-api.el (nh-propertize-attribute): Remove special case
+	for strength; this actually needs to be moved into
+	`nethack-options-status-hilite` because hilite_status uses 19-118
+	instead of 18/**, but I haven't gotten that far yet.
+
 2025-08-28  George Huebner  <george@feyor.sh>
 
         * nethack-cmd.el (nethack-command-shell): Removed shell support to
