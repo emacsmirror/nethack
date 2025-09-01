@@ -1,5 +1,14 @@
 2025-09-01  George Huebner  <george@feyor.sh>
 
+        * nethack-compat.el (nh-gamegrid-set-cell): Remove oldch parameter
+	and remove the call to `gamegrid-set-face`, as it appears
+	superfluous and breaks on IBMgraphics.
+        * nethack-api.el (nhapi-print-glyph): Update accordingly and make
+	symset parsing consistent with C code (match case insensitively
+	and support IBMgraphics variants).
+
+2025-09-01  George Huebner  <george@feyor.sh>
+
         * nethack.el (nethack-installed-p): Be liberal and accept any
 	version of NetHack instead of just the version stored in
 	`nethack-version`. The chances of a user having an old NetHack
