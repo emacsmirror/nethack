@@ -1,5 +1,12 @@
 2025-09-02  George Huebner  <george@feyor.sh>
 
+	* enh-370.patch: Seems to work when building with MSYS2 on an
+	x86_64 Windows machine; YMMV.
+        * nethack-options.el (nethack-options-file): Use the appropriate
+	path on Windows.
+
+2025-09-02  George Huebner  <george@feyor.sh>
+
         * nethack-api.el (nh-menu-toggle-item): Toggling menu items with
 	non-unique accelerators now works based on the position of point
 	in the menu buffer.
