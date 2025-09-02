@@ -1,5 +1,10 @@
 2025-09-02  George Huebner  <george@feyor.sh>
 
+        * nethack-api.el (nhapi-restore-window-configuration): Only create
+	an inventory window if OPTIONS:perm_invent is set.
+
+2025-09-02  George Huebner  <george@feyor.sh>
+
         * nethack.el (nethack-start): Parse options file and set
 	`nethack-options` when starting NetHack instead of once at load
 	time.
