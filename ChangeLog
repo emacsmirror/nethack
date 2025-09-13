@@ -1,3 +1,8 @@
+2025-09-13  George Huebner  <george@feyor.sh>
+
+	* nethack.el (nh-map-mode): Disable variable-pitch mode to ensure
+	consistent spacing of glyphs.
+
 2025-09-02  George Huebner  <george@feyor.sh>
 
 	* enh-370.patch: Seems to work when building with MSYS2 on an
