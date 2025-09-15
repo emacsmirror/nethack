@@ -43,6 +43,7 @@
 (require 'nethack-options)
 (require 'url)
 (require 'tramp)
+(require 'dired-aux)
 
 (defgroup nethack nil
   "Emacs lisp frontend to the lisp window port of Nethack 3.4.0."
@@ -380,7 +381,10 @@ compatible version of NetHack complied with the lisp patch, then
   :group 'nethack)
 
 (defcustom nethack-program
-  (expand-file-name "nethack" nethack-build-directory)
+  (expand-file-name (pcase window-system
+                      ('windows-nt "binary/NetHack.exe")
+                      (_ "games/nethack"))
+                    nethack-build-directory)
   "Program to run to start a game of Nethack.
 If this variable is custom-set outside of the default
 `nethack-build-directory', and it does indeed point to a working
@@ -407,7 +411,7 @@ See https://nethackwiki.com/wiki/Environment_variable for more information."
   :group 'nethack)
 
 (defcustom nethack-version
-  "3.6.6"
+  "3.6.7"
   "The NetHack version to download, install, and bulid."
   :group 'nethack
   :type 'string)
@@ -422,9 +426,7 @@ See https://nethackwiki.com/wiki/Environment_variable for more information."
   "Queries the user for the NetHack version.
 Currently, the two supported versions are 3.6.6 and 3.4.3."
   (interactive)
-  (read-answer "NetHack version "
-               '(("3.6.6" ?6 "366")
-                 ("3.4.3" ?3 "343"))))
+  (completing-read "NetHack version: " '("3.6.7" "3.7.0") nil nil))
 
 (defun nethack-installed-p ()
   "Determine if a patched NetHack is installed.
@@ -447,7 +449,6 @@ version and the correct version for the lisp-patch."
                (match-string-no-properties 1 version-string))))))
 
 (defun nethack-build (&optional
-                        callback
                         no-download-p
                         build-directory)
   "Build the NetHack program in the background.
@@ -464,13 +465,12 @@ will be set to BUILD-DIRECTORY.  The NetHack executable will be
 located within the BUILD-DIRECTORY.
 
 Returns the buffer of the compilation process."
-  (unless callback (setq callback #'ignore))
   (when build-directory
     (setq-default nethack-build-directory build-directory)
     (setq-default nethack-program
                   (expand-file-name "nethack" nethack-build-directory)))
-  (unless (file-exists-p nethack-build-directory)
-    (mkdir nethack-build-directory))
+  (delete-directory nethack-build-directory t)
+  (mkdir nethack-build-directory)
   ;; needs to make patch, hints(-3.6), and build
   ;; make patch simply patches
   ;; make hints runs ./setup.sh
@@ -478,37 +478,30 @@ Returns the buffer of the compilation process."
   ;; make build runs make all and make install in nethack-src
   (let* ((default-directory nethack-build-directory)
          (source-directory (expand-file-name "nethack-src" default-directory)))
-    (unless (file-exists-p source-directory)
-      (mkdir source-directory))
     (unless no-download-p (nethack-build-download))
     (nethack-build-untar)
     (nethack-build-patch)
     (nethack-build-setup)
-    (nethack-build-compile callback)))
+    (nethack-build-compile)))
 
 (defun nethack-build-download ()
   "Download the nethack source from nethack.org.
 The source is saved as nethack.tgz within the
 `default-directory'."
-  (let* ((nethack-tar (concat "/nethack-" (nethack-version-nodots) "-src.tgz"))
-         (nethack-url
-          (concat "https://nethack.org/download/" nethack-version nethack-tar)))
-    (url-copy-file nethack-url (expand-file-name "nethack.tgz"
+  (let* ((download-url (concat "https://github.com/NetHack/NetHack/archive/NetHack-"
+                              (pcase nethack-version
+                                ("3.6.7" "3.6.7_Released")
+                                ("3.7.0" "3.7")
+                                (_ (error "Unsupported NetHack version %s" nethack-version)))
+                              ".tar.gz")))
+    (url-copy-file download-url (expand-file-name "nethack.tar.gz"
                                                  default-directory)
                    t)))                 ; It's OK if it already exists.
 
 (defun nethack-build-untar ()
-  "Untar the nethack source out of nethack-tar.
-Untars the file nethack.tgz located in ‘default-directory’ into
-‘default-directory’/nethack-src.
-
-Note that this is system specific to GNU tar and BSD tar, since
-it relies on using the flag --strip-components."
-  (shell-command
-   (format "tar xzf %s/nethack.tgz -C %s %s"
-           default-directory
-           source-directory
-           "--strip-components=1 --ignore-command-error")))
+  "Decompress nethack source from nethack.tar.gz to nethack-src."
+  (dired-compress-file "nethack.tar.gz")
+  (rename-file (car (file-expand-wildcards "NetHack*")) "nethack-src"))
 
 (defun nethack-build-patch ()
   "Patch the NetHack source with lisp patches."
@@ -519,18 +512,16 @@ it relies on using the flag --strip-components."
      (concat nethack-el-directory "enh-" (nethack-version-nodots) ".patch"))))
 
 (defun nethack-build-setup ()
-  "Setup the NetHack with ./setup.sh.
-Uses the hints file for >3.6."
-  ;; cd nethack-src/sys/unix && $(SHELL) ./setup.sh
-  ;; or
+  "Run any pre-build setup before building NetHack."
   ;; cd nethack-src/sys/unix && $(SHELL) ./setup.sh hints/linux-lisp
-  (let ((default-directory (expand-file-name "sys/unix" source-directory)))
-    (process-file-shell-command
-     (concat "./setup.sh"
-             (when (version<= "3.6.0" nethack-version)
-               " hints/linux-lisp")))))
+  ;; or on windows,
+  ;; cd nethack-src && cp sys/windows/GNUmakefile* src/
+  (pcase window-system
+    ('windows-nt (mapcar (lambda (f) (copy-file f (expand-file-name (concat "src/" (file-name-nondirectory f)) source-directory))) (file-expand-wildcards (expand-file-name "sys/windows/GNUmakefile*" source-directory))))
+    (_ (let ((default-directory (expand-file-name "sys/unix" source-directory)))
+         (process-file-shell-command "./setup.sh hints/lisp")))))
 
-(defun nethack-build-compile (callback)
+(defun nethack-build-compile ()
   "Compile NetHack with make.
 CALLBACK is called when the compilation finishes (with no
 arguments).
@@ -539,7 +530,7 @@ Returns the buffer of the compilation process.
 
 Requires ‘make’, ‘gcc’, ‘bison’ or ‘yacc’, ‘flex’ or ‘lex’, and
 the ncurses-dev library for your system."
-  ;; make all && make install
+  ;; make fetch-lua && make install
   (let* ((default-directory source-directory)
          (compilation-cmd
           ;; Right now, since there are two make arguments passed here, the
@@ -549,21 +540,17 @@ the ncurses-dev library for your system."
           ;; obscures the message that the build is done.  Still, it works for
           ;; now, so I'll just need to remember that it's currently a little
           ;; HACK-y.
-          (format "PREFIX=%s make all install"
-                  nethack-build-directory))
+          (concat (when (string= nethack-version "3.7.0") "make fetch-lua && ")
+                          "make PREFIX=" nethack-build-directory
+                          (unless (eq window-system 'windows-nt) " all install"))))
          (compilation-buffer
           (compilation-start compilation-cmd t))) ; Use compilation-shell-minor-mode
 
     (if (get-buffer-window compilation-buffer)
         (select-window (get-buffer-window compilation-buffer))
-      (pop-to-buffer compilation buffer))
+      (pop-to-buffer compilation-buffer)
     (with-current-buffer compilation-buffer
       (setq-local compilation-error-regexp-alist nil)
-      (add-hook 'compilation-finish-functions
-                (lambda (_buffer _status)
-                  (compilation-start compilation-cmd t)
-                  (funcall callback))
-                nil t)                  ; Locally add-hook
       (current-buffer))))
 
 
@@ -592,13 +579,16 @@ non-nil.
 Call `nethack' upon a successful compilation if LAUNCH-NETHACK-P
 is non-nil."
   (interactive)
-  (unless (nethack-installed-p)
+  ;; (unless (nethack-installed-p)
+  (unless nil
     (if (or no-query-p
             (y-or-n-p "Need to (re)build the NetHack program, do it now?"))
         (progn
           (setq-default nethack-version
-                        (or (and no-query-p "3.6.6")
+                        (or (and no-query-p "3.6.7")
                             (nethack-query-for-version)))
+          (when (and (eq window-system 'windows-nt) (not (string= nethack-version "3.7.0")))
+            (error "nethack-el does not support NetHack version %s on Windows" nethack-version))
           (nethack-build
            (lambda ()
              (let ((msg (format "Building the NetHack program %s"
@@ -788,8 +778,8 @@ buffer."
 
 
 ;;; VERSION:
-(defconst nethack-el-version "0.14.0")
-(defconst nethack-el-earliest-compatible-version "0.12.0")
+(defconst nethack-el-version "0.14.1")
+(defconst nethack-el-earliest-compatible-version "0.13.0")
 (defun nethack-el-version ()
   (interactive)
   (message (format "nethack-el %s" nethack-el-version)))
