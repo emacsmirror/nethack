@@ -339,7 +339,7 @@
     map)
   "Keymap used on the Nethack map.")
 
-
+
 (provide 'nethack-keys)
 
 ;;; nethack-keys.el ends here

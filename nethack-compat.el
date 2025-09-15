@@ -36,7 +36,7 @@
 (if (featurep 'xemacs)
     (require 'overlay))
 
-
+
 ;;; utility/compatibility functions
 (defun nh-propertize (string &rest properties)
   "Add text PROPERTIES to STRING and return the new string."
@@ -99,7 +99,7 @@ Return the modified alist."
        (use-local-map nil)
        (setq buffer-read-only nil)
        (unwind-protect
-           (recursive-edit)
+            (recursive-edit)
          (setq buffer-read-only t)
          (nh-map-read-mode -1)
          (use-local-map local-map))
@@ -126,22 +126,22 @@ Return the modified alist."
   (with-current-buffer nh-map-buffer
     (let ((old-pnt (point-marker)))
       (unwind-protect
-          (let ((inhibit-read-only t)
-                (p (or (next-single-property-change (point-min) 'nethack-message)
-                       (point-min))))
-            (goto-char p)
-            (when (or block
-                      (and (> p (point-min))
-                           (>= (+ p (length str) 1 (length " --more--")) nh-map-width)))
-              (nh-overwrite-insert " --more--")
-              (nh-pause)
-              ;; clear the line
-              (delete-region (point-min) (line-end-position))
-              (insert (make-string nh-map-width 32))
-              (goto-char (point-min)))
-            (unless (= (point) (point-min))
-              (setq str (concat " " str)))
-            (nh-overwrite-insert (propertize str 'nethack-message t)))
+           (let ((inhibit-read-only t)
+                 (p (or (next-single-property-change (point-min) 'nethack-message)
+                        (point-min))))
+             (goto-char p)
+             (when (or block
+                       (and (> p (point-min))
+                            (>= (+ p (length str) 1 (length " --more--")) nh-map-width)))
+               (nh-overwrite-insert " --more--")
+               (nh-pause)
+               ;; clear the line
+               (delete-region (point-min) (line-end-position))
+               (insert (make-string nh-map-width 32))
+               (goto-char (point-min)))
+             (unless (= (point) (point-min))
+               (setq str (concat " " str)))
+             (nh-overwrite-insert (propertize str 'nethack-message t)))
         (unless dont-restore-point
           (goto-char old-pnt))))))
 
@@ -235,8 +235,8 @@ Return the modified alist."
   (let ((old-pnt (gensym)))
     `(let ((,old-pnt (point-marker)))
        (unwind-protect
-           (progn
-             ,@body)
+            (progn
+              ,@body)
          (goto-char ,old-pnt)))))
 
 (defun nh-gamegrid-set-cell (x y ch)
@@ -249,6 +249,6 @@ untrained eye it doesn't actually seem to do anything."
       (delete-char 1)
       (insert-char ch 1))))
 
-
+
 (provide 'nethack-compat)
 ;;; nethack-compat.el ends here

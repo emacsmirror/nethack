@@ -36,7 +36,7 @@
 ;; somewhere in your .emacs.el .
 
 ;;; Code:
-
+
 (require 'nethack-compat)
 (require 'nethack-api)
 (require 'nethack-cmd)
@@ -44,7 +44,7 @@
 (require 'nethack-options)
 (require 'url)
 (require 'tramp)
-
+
 (defgroup nethack nil
   "Emacs lisp frontend to the lisp window port of Nethack 3.4.0."
   :group 'games)
@@ -149,7 +149,7 @@ attribute, the new value, the old value, and the percent."
   :type '(hook)
   :group 'nethack)
 
-
+
 (defgroup nethack-faces nil
   "Customizations for faces used by Enethack."
   :group 'nethack)
@@ -361,7 +361,7 @@ attribute, the new value, the old value, and the percent."
   :group 'nethack-faces)
 
 
-
+
 ;;; Installation
 
 (defconst nethack-el-directory
@@ -448,9 +448,9 @@ version and the correct version for the lisp-patch."
                (match-string-no-properties 1 version-string))))))
 
 (defun nethack-build (&optional
-                      callback
-                      no-download-p
-                      build-directory)
+                        callback
+                        no-download-p
+                        build-directory)
   "Build the NetHack program in the background.
 If CALLBACK is non-nil, it should be a function.  It is called
 with the compiled executable as the single argument or nil, if
@@ -567,14 +567,14 @@ the ncurses-dev library for your system."
                 nil t)                  ; Locally add-hook
       (current-buffer))))
 
-
+
 ;;; Initialization
 
 ;;;###autoload
 (defun nethack-install (&optional no-query-p
-                                  no-download-p
-                                  no-error-p
-                                  launch-nethack-p)
+                          no-download-p
+                          no-error-p
+                          launch-nethack-p)
   "Download, install, and patch nethack.
 If the `nethack-program' is not running or does not appear to be
 working, attempt to rebuild it.  If this build succeeded,
@@ -612,7 +612,7 @@ is non-nil."
            no-download-p))
       (message "NetHack not activated"))))
 
-
+
 ;;; Process
 (defvar nh-proc nil)
 (defvar nh-proc-buffer-name "*nh-output*")
@@ -713,9 +713,9 @@ delete the contents, perhaps logging the text."
 
 (defun nh-send (form)
   (let ((command (cond
-                  ((null form) "()") ; the process doesn't handle `nil'
-                  ((stringp form) form)
-                  (t (prin1-to-string form)))))
+                   ((null form) "()") ; the process doesn't handle `nil'
+                   ((stringp form) form)
+                   (t (prin1-to-string form)))))
     (with-current-buffer (process-buffer nh-proc) (erase-buffer))
     (process-send-string nh-proc (concat command "\n"))
     (nh-log (format ";;; %s\n" command))))
@@ -727,7 +727,7 @@ delete the contents, perhaps logging the text."
   (while (and (member (process-status nh-proc) '(open run))
               (not nh-at-prompt))
     (accept-process-output nh-proc)))
-
+
 ;;; Buffer code (aka windows in Nethack)
 (defvar nh-map-mode-syntax-table
   (let ((table (make-syntax-table)))
@@ -781,13 +781,13 @@ buffer."
   (kill-buffer (get-buffer nh-log-buffer)))
 
 
-
+
 
 (run-hooks 'nethack-load-hook)
 
 (provide 'nethack)
 
-
+
 ;;; VERSION:
 (defconst nethack-el-version "0.14.0")
 (defconst nethack-el-earliest-compatible-version "0.12.0")

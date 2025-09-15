@@ -36,7 +36,7 @@
 (require 'gamegrid)
 (require 'nethack-keys)
 (require 'nethack-options)
-
+
 ;;; Buffer handling
 (defvar nh-map-buffer nil)
 (defvar nh-status-buffer nil)
@@ -74,7 +74,7 @@
   (with-current-buffer nh-map-buffer
     (goto-char (gamegrid-cell-offset (- x 1) y))))
 
-
+
 ;;; Status/Attribute code:b
 (defun nh-propertize-attribute (attribute form)
   "Give an ATTRIBUTE the correct faces.
@@ -177,36 +177,36 @@ See ‘nh-status-attributes’ for details on the format.")
                   0))
       (when (not (string-equal field "T"))
         (run-hook-with-args 'nethack-status-attribute-change-functions
-                             field new-value old-value percent)))))
+                            field new-value old-value percent)))))
 
 (defun nh-status-string (format)
   (mapconcat
    (lambda (ch)
      (let ((stat (nh-status-char-to-format ch)))
        (cond
-        ((equal stat "condition")
-         (mapconcat
-          (lambda (x)
-            (let ((c (nh-propertize-attribute x "%s")))
-              (when (not (string-equal c ""))
-                (concat c " "))))
-          nh-status-conditions
-          ""))
-        ((and (string-equal (car stat) "title") (nethack-options-set-p 'hitpointbar))
-         (let ((title-str (nth 1 (assoc "title" nh-status-attributes))))
-           (when-let* ((hp-attr (assoc "hitpoints" nh-status-attributes))
-                       (hp-face (car (mapcan (lambda (f)
-                                          (apply (copy-tree f) (cdr hp-attr)))
-                                        (nethack-options-status-hilite "hitpoints"))))
-                       (hp-percent (nth 3 hp-attr)))
-             (put-text-property 0 (length title-str) 'face nil title-str)
-             (put-text-property 0 (floor (* (length title-str) (/ hp-percent 100.0))) 'face `(:inherit ,hp-face :inverse-video t) title-str))
-           (concat "[" title-str "] ")))
-        (stat
-         (nh-propertize-attribute
-          (assoc (car stat) nh-status-attributes)
-          (cdr stat)))                        ; String format
-        (t (char-to-string ch)))))
+         ((equal stat "condition")
+          (mapconcat
+           (lambda (x)
+             (let ((c (nh-propertize-attribute x "%s")))
+               (when (not (string-equal c ""))
+                 (concat c " "))))
+           nh-status-conditions
+           ""))
+         ((and (string-equal (car stat) "title") (nethack-options-set-p 'hitpointbar))
+          (let ((title-str (nth 1 (assoc "title" nh-status-attributes))))
+            (when-let* ((hp-attr (assoc "hitpoints" nh-status-attributes))
+                        (hp-face (car (mapcan (lambda (f)
+                                                (apply (copy-tree f) (cdr hp-attr)))
+                                              (nethack-options-status-hilite "hitpoints"))))
+                        (hp-percent (nth 3 hp-attr)))
+              (put-text-property 0 (length title-str) 'face nil title-str)
+              (put-text-property 0 (floor (* (length title-str) (/ hp-percent 100.0))) 'face `(:inherit ,hp-face :inverse-video t) title-str))
+            (concat "[" title-str "] ")))
+         (stat
+          (nh-propertize-attribute
+           (assoc (car stat) nh-status-attributes)
+           (cdr stat)))                        ; String format
+         (t (char-to-string ch)))))
    format nil))
 
 ;; TODO make this part of a unified defcustom array?
@@ -280,7 +280,7 @@ If CH is the character “f” for “conditions”, then the string “conditio
          (insert (nh-status-string nethack-status-buffer-format)))))))
 
 
-
+
 ;;; Menu code:
 (defun nhapi-menu-putstr (menuid attr str)
   "On buffer associated with MENUID, insert with ATTR the STR."
@@ -816,34 +816,34 @@ the menu is dismissed."
         (progn
           (setq nh-inventory-need-update nil)
           (nh-send nil))
-        (progn
-          (unless nh-active-menu-buffer
-            (setq nh-window-configuration (current-window-configuration)))
-          (if (one-window-p)
+      (progn
+        (unless nh-active-menu-buffer
+          (setq nh-window-configuration (current-window-configuration)))
+        (if (one-window-p)
             (switch-to-buffer buffer)
-            ;; Use the window displaying the message buffer for the menu
-            ;; buffer, if possible.
-            (let ((message-window (and nh-message-buffer
-                                       (get-buffer-window nh-message-buffer)))
-                  (inventory-window (and nh-inventory-buffer
-                                         (get-buffer-window nh-inventory-buffer))))
-              (if (or (and inventory-window (equal buffer nh-inventory-buffer))
-                      (not message-window))
-                  (switch-to-buffer-other-window (nh-menu-buffer menuid) t)
+          ;; Use the window displaying the message buffer for the menu
+          ;; buffer, if possible.
+          (let ((message-window (and nh-message-buffer
+                                     (get-buffer-window nh-message-buffer)))
+                (inventory-window (and nh-inventory-buffer
+                                       (get-buffer-window nh-inventory-buffer))))
+            (if (or (and inventory-window (equal buffer nh-inventory-buffer))
+                    (not message-window))
+                (switch-to-buffer-other-window (nh-menu-buffer menuid) t)
                 ;; this codepath basically means the window displaying perm_invent will be chosen to display stuff,
                 ;; *except* at game over, when it will be display in the window that usually displays the game map.
                 ;; yes, this is a stupid way of doing it.
                 (select-window message-window)
                 (switch-to-buffer-other-window (nh-menu-buffer menuid) t)))
-            ;; make window larger, if necessary
-            (let ((bh (nh-window-buffer-height (selected-window)))
-                  (wh (- (window-height) 1)))
-              (when (> bh wh)
-                (enlarge-window (- bh wh)))))
-          (nh-menu-mode how)
-          (goto-char (point-min))
-          (message "Displaying menu")
-          (setq nh-active-menu-buffer buffer)))))
+          ;; make window larger, if necessary
+          (let ((bh (nh-window-buffer-height (selected-window)))
+                (wh (- (window-height) 1)))
+            (when (> bh wh)
+              (enlarge-window (- bh wh)))))
+        (nh-menu-mode how)
+        (goto-char (point-min))
+        (message "Displaying menu")
+        (setq nh-active-menu-buffer buffer)))))
 
 (defun nhapi-restore-window-configuration ()
   "Layout the nethack windows according to the values
@@ -932,10 +932,10 @@ the menu is dismissed."
 (defvar nh-options-mon-polycontrol nil)
 
 (defun nhapi-options (cbreak dec-graphics echo ibm-graphics msg-history
-                             num-pad news window-inited vision-inited
-                             menu-tab-sep menu-requested num-pad-mode
-                             purge-monsters bouldersym travelcc
-                             sanity-check mon-polycontrol &rest ignore)
+                      num-pad news window-inited vision-inited
+                      menu-tab-sep menu-requested num-pad-mode
+                      purge-monsters bouldersym travelcc
+                      sanity-check mon-polycontrol &rest ignore)
   (setq nh-options-cbreak cbreak)
   (setq nh-options-dec-graphics dec-graphics)
   (setq nh-options-echo echo)

@@ -48,7 +48,7 @@ parsing is also done on the Lisp-side of nethack-el."
   :type '(file)
   :group 'nethack)
 
-
+
 
 (defconst nethack-options-fields-percents
   '("hitpoints" "power" "experience" "experience-level")
@@ -197,7 +197,7 @@ Matches if the ‘car’ of an element in ‘nethack-options’ is “hilite_sta
                     (equal (car-safe elt) "hilite_status"))
                   nethack-options))))
 
-
+
 
 (defun nethack-options-parse-status-behav (behav)
   (list 'behavior
@@ -255,27 +255,27 @@ For example, given a BEHAV of “movement”, returns a list of “lev”, “fl
       (setq result
             (cons
              (cond
-              ;; Condition needs to be handled a little differently
-              ((equal "condition" field-name)
-               (let ((behav (pop ops))) ; (cadr ops)
-                 (list (cons 'condition
-                             (mapcar
-                              #'downcase
-                              (mapcan
-                               #'nethack-options-substitute-conditions
-                               (if (string-match-p "+" behav)
-                                   (split-string behav "+")
-                                 (list behav)))))
-                       (nethack-options-parse-attr (pop ops)))))
-              ((and (nethack-options-status-field-p field-name)
-                    (cdr ops))          ; (cddr ops)
-               (list (nethack-options-parse-status-behav (pop ops))
-                     (nethack-options-parse-attr (pop ops))))
-              ;; For something like: hilite_status:hitpoints/<=30%/red/normal
-              ;; This also applies for hilite_status:hitpoints-max/green&normal
-              (t
-               (list (nethack-options-parse-status-behav 'else)
-                     (nethack-options-parse-attr (pop ops)))))
+               ;; Condition needs to be handled a little differently
+               ((equal "condition" field-name)
+                (let ((behav (pop ops))) ; (cadr ops)
+                  (list (cons 'condition
+                              (mapcar
+                               #'downcase
+                               (mapcan
+                                #'nethack-options-substitute-conditions
+                                (if (string-match-p "+" behav)
+                                    (split-string behav "+")
+                                  (list behav)))))
+                        (nethack-options-parse-attr (pop ops)))))
+               ((and (nethack-options-status-field-p field-name)
+                     (cdr ops))          ; (cddr ops)
+                (list (nethack-options-parse-status-behav (pop ops))
+                      (nethack-options-parse-attr (pop ops))))
+               ;; For something like: hilite_status:hitpoints/<=30%/red/normal
+               ;; This also applies for hilite_status:hitpoints-max/green&normal
+               (t
+                (list (nethack-options-parse-status-behav 'else)
+                      (nethack-options-parse-attr (pop ops)))))
              result)))
     (reverse result)))
 
@@ -313,10 +313,10 @@ Returns an alist entry of the options set."
         (cons
          op
          (cond
-          ((equal "hilite_status" op)
-           (nethack-options-parse-hilite-status params))
-          (t
-           (list params)))))
+           ((equal "hilite_status" op)
+            (nethack-options-parse-hilite-status params))
+           (t
+            (list params)))))
     elem))
 
 (defun nethack-options-parse-option (elem)
@@ -344,26 +344,26 @@ Maybe I should have used eieio."
                       (eq (char-after) ?#))
             (setq elem (buffer-string))
             (cond
-             ;; Matches both OPTION= and OPTIONS=
-             ((string-prefix-p "OPTION" elem)
-              (setq result
-                    (append result (nethack-options-parse-option elem))))
-             ;; ((string-prefix-p "AUTOPICKUP_EXCEPTION=" elem))
-             ((string-prefix-p "MENUCOLOR=" elem)
-              (setq result
-                    (append result (list
-                                    (nethack-options-parse-menucolor elem)))))
-             ;; ((string-prefix-p "BOLDER=" elem))
-             ;; ((string-prefix-p "MSGTYPE=" elem))
-             ;; ((string-prefix-p "BINDINGS=" elem))
-             ;; ((string-prefix-p "SOUND=" elem))
-             ;; I'm probably not going to process “CHOOSE” lines
-             (t nil)))
+              ;; Matches both OPTION= and OPTIONS=
+              ((string-prefix-p "OPTION" elem)
+               (setq result
+                     (append result (nethack-options-parse-option elem))))
+              ;; ((string-prefix-p "AUTOPICKUP_EXCEPTION=" elem))
+              ((string-prefix-p "MENUCOLOR=" elem)
+               (setq result
+                     (append result (list
+                                     (nethack-options-parse-menucolor elem)))))
+              ;; ((string-prefix-p "BOLDER=" elem))
+              ;; ((string-prefix-p "MSGTYPE=" elem))
+              ;; ((string-prefix-p "BINDINGS=" elem))
+              ;; ((string-prefix-p "SOUND=" elem))
+              ;; I'm probably not going to process “CHOOSE” lines
+              (t nil)))
           (widen)
           (forward-line 1)))
       result)))
 
-
+
 
 (defun nethack-options-set-p (op)
   "Check if OP is set as a NetHack option.
@@ -410,95 +410,96 @@ is done automatically, so “Stone” will match to “major”."
        (seq-remove
         #'null
         (mapcar
+         ;; TODO refactor for multiple cases
          (lambda (hilite)
            (let* ((hilite-name (car hilite))
                   (hilite-case1 (cadr hilite))
                   (hilite-case2 (nth 2 hilite))
                   (hilite-behavior1 (cdar hilite-case1)))
              (cond
-              ;; always
-              ((or (and (nethack-options-equal hilite-name "condition")
-                        (member stat nethack-options-cond-all)
-                        (equal 'else (car hilite-behavior1)))
-                   (and (nethack-options-equal stat hilite-name)
-                        (equal 'else (car hilite-behavior1))))
-               `(lambda (_new _old _percent _age)
-                  (nethack-options-attr-propertize
-                   (quote ,(cdadr hilite-case1)))))
-              ;; not condition, with second else clouse
-              ((and (nethack-options-equal stat hilite-name)
-                    (equal 'else (car-safe hilite-case2)))
-               (nethack-options-status-function
-                hilite-name
-                (car hilite-behavior1)
-                (nethack-options-attr-propertize
-                 (cdadr hilite-case1))
-                (nethack-options-attr-propertize
-                 (cdadr hilite-case2))))
-              ;; not condition, with second clause
-              ((and (nethack-options-equal stat hilite-name)
-                    (cdr-safe hilite-case2))
-               `(lambda (new old percent age)
-                  (funcall
-                   (nethack-options-status-function
-                    ,hilite-name
-                    (quote ,(car hilite-behavior1))
-                    (quote ,(nethack-options-attr-propertize
-                             (cdadr hilite-case1)))
-                    (funcall
-                     (nethack-options-status-function
-                      ,hilite-name
-                      (quote ,(cadar hilite-case2))
-                      (quote ,(nethack-options-attr-propertize
-                               (cdadr hilite-case2))))
-                     new old percent age))
-                   new old percent age)))
-              ;; not condition, with no second clause
-              ((nethack-options-equal stat hilite-name)
-               (nethack-options-status-function
-                hilite-name
-                (car hilite-behavior1)
-                (nethack-options-attr-propertize
-                 (cdadr hilite-case1))))
-              ;; condition, with second else clause
-              ((and (equal hilite-name "condition")
-                    (member stat hilite-behavior1)
-                    (equal 'else (car-safe hilite-case2)))
-               (nethack-options-status-function
-                hilite-name
-                (car (member stat hilite-behavior1))
-                (nethack-options-attr-propertize
-                 (cdadr hilite-case1))
-                (nethack-options-attr-propertize
-                 (cdadr hilite-case2))))
-              ;; condition, with second clause
-              ((and (equal hilite-name "condition")
-                    (member stat hilite-behavior1)
-                    (cdr-safe hilite-case2))
-               `(lambda (new old percent age)
-                  (funcall
-                   (nethack-options-status-function
-                    ,hilite-name
-                    ,(car (member stat hilite-behavior1))
-                    (quote ,(nethack-options-attr-propertize
-                             (cdadr hilite-case1)))
-                    (funcall
-                     (nethack-options-status-function
-                      ,hilite-name
-                      ,(car (member stat (cadar hilite-case2)))
-                      (quote ,(nethack-options-attr-propertize
-                               (cdadr hilite-case2)))
+               ;; always
+               ((or (and (nethack-options-equal hilite-name "condition")
+                         (member stat nethack-options-cond-all)
+                         (equal 'else (car hilite-behavior1)))
+                    (and (nethack-options-equal stat hilite-name)
+                         (equal 'else (car hilite-behavior1))))
+                `(lambda (_new _old _percent _age)
+                   (nethack-options-attr-propertize
+                    (quote ,(cdadr hilite-case1)))))
+               ;; not condition, with second else clouse
+               ((and (nethack-options-equal stat hilite-name)
+                     (equal 'else (car-safe hilite-case2)))
+                (nethack-options-status-function
+                 hilite-name
+                 (car hilite-behavior1)
+                 (nethack-options-attr-propertize
+                  (cdadr hilite-case1))
+                 (nethack-options-attr-propertize
+                  (cdadr hilite-case2))))
+               ;; not condition, with second clause
+               ((and (nethack-options-equal stat hilite-name)
+                     (cdr-safe hilite-case2))
+                `(lambda (new old percent age)
+                   (funcall
+                    (nethack-options-status-function
+                     ,hilite-name
+                     (quote ,(car hilite-behavior1))
+                     (quote ,(nethack-options-attr-propertize
+                              (cdadr hilite-case1)))
+                     (funcall
+                      (nethack-options-status-function
+                       ,hilite-name
+                       (quote ,(cadar hilite-case2))
+                       (quote ,(nethack-options-attr-propertize
+                                (cdadr hilite-case2))))
                       new old percent age))
-                    new old percent age))))
-              ;; condition, with no second clause
-              ((and (equal hilite-name "condition")
-                    (member stat hilite-behavior1))
-               (nethack-options-status-function
-                hilite-name
-                (car (member stat hilite-behavior1))
-                (nethack-options-attr-propertize
-                 (cdadr hilite-case1))))
-              (t nil))))
+                    new old percent age)))
+               ;; not condition, with no second clause
+               ((nethack-options-equal stat hilite-name)
+                (nethack-options-status-function
+                 hilite-name
+                 (car hilite-behavior1)
+                 (nethack-options-attr-propertize
+                  (cdadr hilite-case1))))
+               ;; condition, with second else clause
+               ((and (equal hilite-name "condition")
+                     (member stat hilite-behavior1)
+                     (equal 'else (car-safe hilite-case2)))
+                (nethack-options-status-function
+                 hilite-name
+                 (car (member stat hilite-behavior1))
+                 (nethack-options-attr-propertize
+                  (cdadr hilite-case1))
+                 (nethack-options-attr-propertize
+                  (cdadr hilite-case2))))
+               ;; condition, with second clause
+               ((and (equal hilite-name "condition")
+                     (member stat hilite-behavior1)
+                     (cdr-safe hilite-case2))
+                `(lambda (new old percent age)
+                   (funcall
+                    (nethack-options-status-function
+                     ,hilite-name
+                     ,(car (member stat hilite-behavior1))
+                     (quote ,(nethack-options-attr-propertize
+                              (cdadr hilite-case1)))
+                     (funcall
+                      (nethack-options-status-function
+                       ,hilite-name
+                       ,(car (member stat (cadar hilite-case2)))
+                       (quote ,(nethack-options-attr-propertize
+                                (cdadr hilite-case2)))
+                       new old percent age))
+                     new old percent age))))
+               ;; condition, with no second clause
+               ((and (equal hilite-name "condition")
+                     (member stat hilite-behavior1))
+                (nethack-options-status-function
+                 hilite-name
+                 (car (member stat hilite-behavior1))
+                 (nethack-options-attr-propertize
+                  (cdadr hilite-case1))))
+               (t nil))))
          nethack-options-hilites))
        nethack-options-status-hilite-results)))
 
@@ -522,35 +523,35 @@ ATTR and ELSE should be lists of faces.  ATTR is returned from the function if
       `(lambda (new old percent age)
          (setq val (or (and (quote ,percentp) (number-to-string percent)) new))
          (if (cond
-              (,(string-prefix-p ">=" behav)
-               (>= (string-to-number val)
-                   (string-to-number ,(substring behav 2))))
-              (,(string-prefix-p "<=" behav)
-               (<= (string-to-number val)
-                   (string-to-number ,(substring behav 2))))
-              (,(string-prefix-p "<" behav)
-               (< (string-to-number val)
-                  (string-to-number ,(substring behav 1))))
-              (,(string-prefix-p ">" behav)
-               (> (string-to-number val)
-                  (string-to-number ,(substring behav 1))))
-              (,(string-equal "always" behav)
-               t)
-              ((and ,(string-equal "up" behav)
-                    (<= age nethack-status-highlight-delay))
-               (> (string-to-number new)
-                  (string-to-number old)))
-              ((and ,(string-equal "down" behav)
-                    (<= age nethack-status-highlight-delay))
-               (< (string-to-number new)
-                  (string-to-number old)))
-              ((and ,(string-equal "changed" behav)
-                    (<= age nethack-status-highlight-delay))
-               (not (= (string-to-number new)
-                       (string-to-number old))))
-              (t
-               ;; works for both text match and absolute value
-               (string-equal val ,behav)))
+               (,(string-prefix-p ">=" behav)
+                (>= (string-to-number val)
+                    (string-to-number ,(substring behav 2))))
+               (,(string-prefix-p "<=" behav)
+                (<= (string-to-number val)
+                    (string-to-number ,(substring behav 2))))
+               (,(string-prefix-p "<" behav)
+                (< (string-to-number val)
+                   (string-to-number ,(substring behav 1))))
+               (,(string-prefix-p ">" behav)
+                (> (string-to-number val)
+                   (string-to-number ,(substring behav 1))))
+               (,(string-equal "always" behav)
+                t)
+               ((and ,(string-equal "up" behav)
+                     (<= age nethack-status-highlight-delay))
+                (> (string-to-number new)
+                   (string-to-number old)))
+               ((and ,(string-equal "down" behav)
+                     (<= age nethack-status-highlight-delay))
+                (< (string-to-number new)
+                   (string-to-number old)))
+               ((and ,(string-equal "changed" behav)
+                     (<= age nethack-status-highlight-delay))
+                (not (= (string-to-number new)
+                        (string-to-number old))))
+               (t
+                ;; works for both text match and absolute value
+                (string-equal val ,behav)))
              (quote ,attr)
            (quote ,else)))
     ;; Is a condition
@@ -559,7 +560,7 @@ ATTR and ELSE should be lists of faces.  ATTR is returned from the function if
            (quote ,attr)
          (quote ,else)))))
 
-
+
 
 (defun nethack-options-highlight-menu ()
   "Highlight a NetHack menu buffer.
@@ -585,11 +586,11 @@ at a time."
                                     (cadr x)))))
             nethack-options-menucolors))))
 
-
+
 
 (defvar nethack-options nil)
 
-
+
 
 (provide 'nethack-options)
 

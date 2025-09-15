@@ -36,12 +36,12 @@
      ,docstr
      (interactive "p")
      (unwind-protect
-         (when ,cmdstr
-           (nh-send-and-wait
-            (concat ,cmdstr " "
-                    (if count
-                        (number-to-string count)
-                      "1"))))
+          (when ,cmdstr
+            (nh-send-and-wait
+             (concat ,cmdstr " "
+                     (if count
+                         (number-to-string count)
+                       "1"))))
        ,@body)))
 
 (defun-nethack-command north            ;k
@@ -208,7 +208,7 @@
 ;; This is a slash'em only command
 (defun-nethack-command technique "Perform a technique." "technique")
 
-
+
 (defun-nethack-command previous-message  ; ^P
   "Scroll through previously displayed game messages"
   nil ;;"doprev" FIXME: is not implemented in C
@@ -283,7 +283,7 @@ With a prefix arg, also redraws the map glyphs."
 (defun-nethack-command show-tool-in-use ;(
   "Show the tools currently in use"
   "showtool")
-
+
 
 ;;; Lisp specific commands
 (defun-nethack-command options          ;(
