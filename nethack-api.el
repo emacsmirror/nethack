@@ -3,9 +3,8 @@
 ;; Copyright (C) 2002,2003,2005  Ryan Yeske and Shawn Betts
 
 ;; Author: Ryan Yeske
+;; Maintainer: George Huebner <george@feyor.sh>
 ;; Created: Sat Mar 18 11:24:02 2000
-;; Version: $Id$
-;; Keywords: games
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by

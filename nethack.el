@@ -3,9 +3,13 @@
 ;; Copyright (C) 2003,2005  Ryan Yeske and Shawn Betts
 
 ;; Author: Ryan Yeske <rcyeske@vcn.bc.ca>
+;; Maintainer: George Huebner <george@feyor.sh>
 ;; Created: Sat Mar 18 11:31:52 2000
-;; Version: $Id$
+;; Version: 0.14.1
 ;; Keywords: games
+;; URL: https://github.com/Feyorsh/nethack-el
+
+;; Package-Requires: ((url) (tramp) cl-lib)
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -24,16 +28,11 @@
 
 ;;; Commentary:
 ;;
-;; Note: This package requires external libraries and works currently
-;; only on GNU/Linux systems.
+;; Note: This package requires external libraries (if building from
+;; source) and has been tested on Linux, macOS, and (NetHack
+;; 3.7 only) Windows.
 ;;
-;; Note: If you ever update it, you need to restart Emacs afterwards.
-;;
-;; To activate the package put
-;;
-;; (nethack-install)
-;;
-;; somewhere in your .emacs.el .
+;; Usage: M-x nethack
 
 ;;; Code:
 

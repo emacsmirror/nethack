@@ -3,7 +3,7 @@
 ;; Copyright (C) 2003,2005 Ryan Yeske and Shawn Betts
 
 ;; Author: Ryan Yeske <rcyeske@vcn.bc.ca>
-;; Keywords:
+;; Maintainer: George Huebner <george@feyor.sh>
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
