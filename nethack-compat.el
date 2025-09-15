@@ -65,9 +65,9 @@ Return the modified alist."
     ;; FIXME: this is arguably a gross hack. Create insert functions
     ;; for numbers, letters and punctuation.
     (dotimes (i (- 126 32))
-      (define-key m (vector (+ i 32)) 'nethack-map-read-self-insert))
+      (define-key m (vector (+ i 32)) #'nethack-map-read-self-insert))
     ;; FIXME: this'll do for now
-    (define-key m (kbd "RET") 'nethack-map-read-submit)
+    (define-key m (kbd "RET") #'nethack-map-read-submit)
     m))
 
 (defun nethack-map-read-self-insert (prefix)
@@ -187,9 +187,9 @@ Return the modified alist."
                      (point-max) (point-max))))))
 
 ;; XEmacs chars are not ints
-(defalias 'nethack-char-to-int (if (fboundp 'char-to-int)
-                              'char-to-int
-                            'identity))
+(defalias 'nethack-char-to-int (if (fboundp #'char-to-int)
+                              #'char-to-int
+                            #'identity))
 
 
 (defun nethack-read-key-sequence-vector (prompt)

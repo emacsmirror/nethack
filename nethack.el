@@ -625,7 +625,7 @@ The variable `nethack-program' is the name of the executable to run."
         (nethack-start (let ((process-environment (append (when nethack-wizmode `(,(concat "NETHACKOPTIONS=@" nethack-options-file))) nethack-environment process-environment))
                              (default-directory (funcall (if (and nethack-wizmode (not (eq system-type 'windows-nt))) 'tramp-file-name-with-sudo 'identity) default-directory))
                              (nethack-program-args (append (when nethack-wizmode '("-D" "-u" "wizard")) nethack-program-args)))
-                         (apply 'start-file-process "nh" nethack-proc-buffer-name
+                         (apply #'start-file-process "nh" nethack-proc-buffer-name
                                 nethack-program nethack-program-args)))))
   (nethack-install))
 
@@ -641,8 +641,8 @@ Assumes nethack is not already running."
     (setq nethack-proc process)
     (setq nethack-options (nethack-options-parse))
     (nethack-reset-status-variables)
-    (set-process-filter nethack-proc 'nethack-filter)
-    (set-process-sentinel nethack-proc 'nethack-sentinel)))
+    (set-process-filter nethack-proc #'nethack-filter)
+    (set-process-sentinel nethack-proc #'nethack-sentinel)))
 
 ;;;; Process code to communicate with the Nethack executable
 (defconst nethack-prompt-regexp
@@ -741,7 +741,7 @@ delete the contents, perhaps logging the text."
   (use-local-map nethack-map-mode-map)
   (set-syntax-table nethack-map-mode-syntax-table)
   (setq mode-name "NetHack Map")
-  (setq major-mode 'nethack-map-mode)
+  (setq major-mode #'nethack-map-mode)
   ;; make scroll-other-window work on the message buffer
   (setq-local other-window-scroll-buffer nethack-message-buffer)
   (setq-local scroll-conservatively 0)  ; recenter
@@ -753,12 +753,12 @@ delete the contents, perhaps logging the text."
 (define-derived-mode nethack-message-mode text-mode "NetHack Messages"
   "Major mode for the Nethack message window."
   (setq buffer-read-only t))
-(put 'nethack-message-mode 'mode-class 'special)
+(put #'nethack-message-mode 'mode-class 'special)
 
 (define-derived-mode nethack-status-mode nil "NetHack Status"
   "Major mode for the Nethack status window."
   (setq buffer-read-only t))
-(put 'nethack-status-mode 'mode-class 'special)
+(put #'nethack-status-mode 'mode-class 'special)
 
 (defun nethack-kill-buffers ()
   "Kill all nethack associated buffers except the nethack process buffer."
