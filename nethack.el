@@ -69,7 +69,7 @@
 
 (defcustom nethack-status-buffer-format
   "n s d c i W C A S\nl g hH pP a eED t Grfv"
-  "Format string for the status in `nh-status-buffer'."
+  "Format string for the status in `nethack-status-buffer'."
   :type '(string)
   :group 'nethack)
 
@@ -431,7 +431,7 @@ Currently, the two supported versions are 3.6.6 and 3.4.3."
 (defun nethack-installed-p ()
   "Determine if a patched NetHack is installed.
 Checks whether a NetHack executable exists, and if running it
-results in an output with prefix ``(nhapi-raw-print'' with the correct NetHack
+results in an output with prefix ``(nethack-nhapi-raw-print'' with the correct NetHack
 version and the correct version for the lisp-patch."
   (and nethack-program
        (file-executable-p nethack-program)
@@ -505,11 +505,11 @@ The source is saved as nethack.tgz within the
 
 (defun nethack-build-patch ()
   "Patch the NetHack source with lisp patches."
-  ;; cd nethack-src && patch -Nr- -p1 < ../../enh-$(NH_VER_NODOTS).patch || true
+  ;; cd nethack-src && patch -Nr- -p1 < ../../enethack-$(NH_VER_NODOTS).patch || true
   (let ((default-directory source-directory))
     (process-file-shell-command
      "patch -Nr- -p1"
-     (concat nethack-el-directory "enh-" (nethack-version-nodots) ".patch"))))
+     (concat nethack-el-directory "enethack-" (nethack-version-nodots) ".patch"))))
 
 (defun nethack-build-setup ()
   "Run any pre-build setup before building NetHack."
@@ -603,11 +603,11 @@ is non-nil."
 
 
 ;;; Process
-(defvar nh-proc nil)
-(defvar nh-proc-buffer-name "*nh-output*")
-(defvar nh-proc-kill-buffer-on-quit t
+(defvar nethack-proc nil)
+(defvar nethack-proc-buffer-name "*nethack-output*")
+(defvar nethack-proc-kill-buffer-on-quit t
   "When the process ends kill the process buffer if this is t.")
-(defvar nh-log-buffer "*nh-log*")
+(defvar nethack-log-buffer "*nethack-log*")
 
 ;;;###autoload
 (defun nethack ()
@@ -618,65 +618,68 @@ The variable `nethack-program' is the name of the executable to run."
       (if (nethack-is-running)
           (progn
             (message "NetHack process already running...")
-            (nhapi-restore-window-configuration))
+            (nethack-nhapi-restore-window-configuration))
         ;; Start the process.
-        (when (get-buffer nh-proc-buffer-name)
-          (kill-buffer nh-proc-buffer-name))
+        (when (get-buffer nethack-proc-buffer-name)
+          (kill-buffer nethack-proc-buffer-name))
         (nethack-start (let ((process-environment (append (when nethack-wizmode `(,(concat "NETHACKOPTIONS=@" nethack-options-file))) nethack-environment process-environment))
                              (default-directory (funcall (if (and nethack-wizmode (not (eq system-type 'windows-nt))) 'tramp-file-name-with-sudo 'identity) default-directory))
                              (nethack-program-args (append (when nethack-wizmode '("-D" "-u" "wizard")) nethack-program-args)))
-                         (apply 'start-file-process "nh" nh-proc-buffer-name
+                         (apply 'start-file-process "nh" nethack-proc-buffer-name
                                 nethack-program nethack-program-args)))))
   (nethack-install))
 
 (defun nethack-is-running ()
   "Return T if nethack is already running."
-  (and (processp nh-proc)
-       (member (process-status nh-proc) '(open run))))
+  (and (processp nethack-proc)
+       (member (process-status nethack-proc) '(open run))))
 
 (defun nethack-start (process)
-  "Given the process, start nethack. Assumes nethack is not already running."
+  "Given PROCESS, start nethack.
+Assumes nethack is not already running."
   (save-excursion
-    (setq nh-proc process)
+    (setq nethack-proc process)
     (setq nethack-options (nethack-options-parse))
-    (nh-reset-status-variables)
-    (set-process-filter nh-proc 'nh-filter)
-    (set-process-sentinel nh-proc 'nh-sentinel)))
+    (nethack-reset-status-variables)
+    (set-process-filter nethack-proc 'nethack-filter)
+    (set-process-sentinel nethack-proc 'nethack-sentinel)))
 
 ;;;; Process code to communicate with the Nethack executable
-(defconst nh-prompt-regexp
+(defconst nethack-prompt-regexp
   "^\\(command\\|menu\\|dummy\\|direction\\|number\\|string\\)> *")
 
-(defun nh-sentinel (proc msg)
+(defun nethack-sentinel (proc msg)
   "Nethack background process sentinel.
 PROC is the process object and MSG is the exit message."
   (with-current-buffer (process-buffer proc)
-    (nh-log (buffer-substring (point-min) (point)))
+    (nethack-log (buffer-substring (point-min) (point)))
     (eval-region (point-min) (point-max))
     (insert "Nethack " msg))
     ;; (when (not (string-equal msg "Nethack finished"))
     ;;    (pop-to-buffer (current-buffer)))
 
   (delete-process proc)
-  (when nh-proc-kill-buffer-on-quit
-    (kill-buffer (get-buffer nh-proc-buffer-name)))
+  (when nethack-proc-kill-buffer-on-quit
+    (kill-buffer (get-buffer nethack-proc-buffer-name)))
   (when nethack-purge-buffers
     (nethack-kill-buffers))
-  (let ((raw-print-buffer (get-buffer nh-raw-print-buffer-name)))
+  (let ((raw-print-buffer (get-buffer nethack-raw-print-buffer-name)))
     (when raw-print-buffer
       (switch-to-buffer raw-print-buffer))))
 
-(defvar nh-log-process-text t)
-(defun nh-log (string)
-  (when nh-log-process-text
-    (with-current-buffer (get-buffer-create nh-log-buffer)
+(defvar nethack-log-process-text t)
+(defun nethack-log (string)
+  (when nethack-log-process-text
+    (with-current-buffer (get-buffer-create nethack-log-buffer)
       (goto-char (point-max))
       (insert string))))
 
-(defvar nh-at-prompt nil)
-(defvar nh-at-prompt-hook nil
-  "Called when there is a prompt. Takes one arg: the kind of prompt. Either \"command\" or \"menu\"")
-(defun nh-filter (proc string)
+(defvar nethack-at-prompt nil)
+(defvar nethack-at-prompt-hook nil
+  "Called when there is a prompt.
+Takes one arg: the kind of prompt.
+Either \"command\" or \"menu\"")
+(defun nethack-filter (proc string)
   "Insert contents of STRING into the buffer associated with PROC.
 Evaluate the buffer contents if we are looking at a prompt and then
 delete the contents, perhaps logging the text."
@@ -685,9 +688,9 @@ delete the contents, perhaps logging the text."
     (goto-char (point-max))
     (insert string)
     (forward-line 0)
-    (when (looking-at nh-prompt-regexp)
+    (when (looking-at nethack-prompt-regexp)
       (let ((prompt (match-string 1)))
-        (nh-log (buffer-substring (point-min) (point)))
+        (nethack-log (buffer-substring (point-min) (point)))
         (save-restriction
           (narrow-to-region (point-min) (point))
           (eval-buffer))
@@ -695,30 +698,30 @@ delete the contents, perhaps logging the text."
                    (equal prompt "menu")
                    (equal prompt "dummy"))
                ;; I Don't think we need this...
-               ;; (nhapi-print-status)
+               ;; (nethack-nhapi-print-status)
                (sit-for 0)
-               (setq nh-at-prompt t)
-               (run-hook-with-args 'nh-at-prompt-hook prompt)))))))
+               (setq nethack-at-prompt t)
+               (run-hook-with-args 'nethack-at-prompt-hook prompt)))))))
 
-(defun nh-send (form)
+(defun nethack-send (form)
   (let ((command (cond
                    ((null form) "()") ; the process doesn't handle `nil'
                    ((stringp form) form)
                    (t (prin1-to-string form)))))
-    (with-current-buffer (process-buffer nh-proc) (erase-buffer))
-    (process-send-string nh-proc (concat command "\n"))
-    (nh-log (format ";;; %s\n" command))))
+    (with-current-buffer (process-buffer nethack-proc) (erase-buffer))
+    (process-send-string nethack-proc (concat command "\n"))
+    (nethack-log (format ";;; %s\n" command))))
 
-(defun nh-send-and-wait (form)
-  (nh-send form)
+(defun nethack-send-and-wait (form)
+  (nethack-send form)
   ;; wait until we get back to a "command" prompt before returning
-  (setq nh-at-prompt nil)
-  (while (and (member (process-status nh-proc) '(open run))
-              (not nh-at-prompt))
-    (accept-process-output nh-proc)))
+  (setq nethack-at-prompt nil)
+  (while (and (member (process-status nethack-proc) '(open run))
+              (not nethack-at-prompt))
+    (accept-process-output nethack-proc)))
 
 ;;; Buffer code (aka windows in Nethack)
-(defvar nh-map-mode-syntax-table
+(defvar nethack-map-mode-syntax-table
   (let ((table (make-syntax-table)))
     (modify-syntax-entry ?\( "w   " table)
     (modify-syntax-entry ?\) "w   " table)
@@ -731,43 +734,42 @@ delete the contents, perhaps logging the text."
     table)
   "Syntax table used in the Nethack map.")
 
-(defun nh-map-mode ()
+(defun nethack-map-mode ()
   "Major mode for the main Nethack map window.
 
-\\{nh-map-mode-map}"
-  (use-local-map nh-map-mode-map)
-  (set-syntax-table nh-map-mode-syntax-table)
+\\{nethack-map-mode-map}"
+  (use-local-map nethack-map-mode-map)
+  (set-syntax-table nethack-map-mode-syntax-table)
   (setq mode-name "NetHack Map")
-  (setq major-mode 'nh-map-mode)
+  (setq major-mode 'nethack-map-mode)
   ;; make scroll-other-window work on the message buffer
-  (setq-local other-window-scroll-buffer nh-message-buffer)
+  (setq-local other-window-scroll-buffer nethack-message-buffer)
   (setq-local scroll-conservatively 0)  ; recenter
   (setq-local scroll-margin 3)
   (variable-pitch-mode -1)
   ;; TODO still need to figure out how to automatically scroll horizontally
   (run-hooks 'nethack-map-mode-hook))
 
-(define-derived-mode nh-message-mode text-mode "NetHack Messages"
-  "Major mode for the Nethack message window"
+(define-derived-mode nethack-message-mode text-mode "NetHack Messages"
+  "Major mode for the Nethack message window."
   (setq buffer-read-only t))
-(put 'nh-message-mode 'mode-class 'special)
+(put 'nethack-message-mode 'mode-class 'special)
 
-(define-derived-mode nh-status-mode nil "NetHack Status"
-  "Major mode for the Nethack status window"
+(define-derived-mode nethack-status-mode nil "NetHack Status"
+  "Major mode for the Nethack status window."
   (setq buffer-read-only t))
-(put 'nh-status-mode 'mode-class 'special)
+(put 'nethack-status-mode 'mode-class 'special)
 
 (defun nethack-kill-buffers ()
-  "Kill all nethack associated buffers except the nethack process
-buffer."
-  (when (buffer-live-p nh-map-buffer)
-    (kill-buffer nh-map-buffer))        ; Preserve window for raw-print goodbye
-  (dolist (buffer (list nh-status-buffer nh-message-buffer))
+  "Kill all nethack associated buffers except the nethack process buffer."
+  (when (buffer-live-p nethack-map-buffer)
+    (kill-buffer nethack-map-buffer))        ; Preserve window for raw-print goodbye
+  (dolist (buffer (list nethack-status-buffer nethack-message-buffer))
     (kill-buffer buffer))
   (mapc (lambda (x) (when (buffer-live-p (cdr x))
                       (kill-buffer (cdr x))))
-        nh-menu-buffer-table)
-  (kill-buffer (get-buffer nh-log-buffer)))
+        nethack-menu-buffer-table)
+  (kill-buffer (get-buffer nethack-log-buffer)))
 
 
 

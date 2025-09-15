@@ -37,49 +37,49 @@
 (require 'nethack-options)
 
 ;;; Buffer handling
-(defvar nh-map-buffer nil)
-(defvar nh-status-buffer nil)
-(defvar nh-message-buffer nil)
-(defvar nh-inventory-buffer nil)
-(defvar nh-menu-buffer-table nil
-  "An alist of (DIGIT-ID . BUFFER) pairs")
-(defun nh-menu-buffer (menuid)
+(defvar nethack-map-buffer nil)
+(defvar nethack-status-buffer nil)
+(defvar nethack-message-buffer nil)
+(defvar nethack-inventory-buffer nil)
+(defvar nethack-menu-buffer-table nil
+  "An alist of (DIGIT-ID . BUFFER) pairs.")
+(defun nethack-menu-buffer (menuid)
   "Return the buffer that corresponds to the MENUID."
-  (let ((buffer (cdr (assq menuid nh-menu-buffer-table))))
+  (let ((buffer (cdr (assq menuid nethack-menu-buffer-table))))
     (if (buffer-live-p buffer)
         buffer
       'nobuffer)))
 
-(defvar nh-message-highlight-overlay nil
+(defvar nethack-message-highlight-overlay nil
   "Overlay used to highlight new text in the message window.")
 
-(defvar nh-raw-print-buffer-name "*nhw raw-print*"
+(defvar nethack-raw-print-buffer-name "*nhw raw-print*"
   "Buffer name for Nethack raw-print messages.")
 
-(defvar nh--window-configuration-before nil)
+(defvar nethack--window-configuration-before nil)
 
-(defun nhapi-raw-print (str)
+(defun nethack-nhapi-raw-print (str)
   (save-current-buffer
-    (let ((buffer (get-buffer-create nh-raw-print-buffer-name)))
+    (let ((buffer (get-buffer-create nethack-raw-print-buffer-name)))
       (switch-to-buffer buffer)
       (insert str "\n"))))
 
-(defun nhapi-raw-print-bold (str)
-  (nhapi-raw-print
-   (nh-propertize str 'face 'nethack-atr-bold-face)))
+(defun nethack-nhapi-raw-print-bold (str)
+  (nethack-nhapi-raw-print
+   (nethack-propertize str 'face 'nethack-atr-bold-face)))
 
-(defun nhapi-curs (x y)
-  "Set the cursor in `nh-map-buffer' to X, Y."
-  (with-current-buffer nh-map-buffer
+(defun nethack-nhapi-curs (x y)
+  "Set the cursor in `nethack-map-buffer' to X, Y."
+  (with-current-buffer nethack-map-buffer
     (goto-char (gamegrid-cell-offset (- x 1) y))))
 
 
 ;;; Status/Attribute code:b
-(defun nh-propertize-attribute (attribute form)
-  "Give an ATTRIBUTE the correct faces.
+(defun nethack-propertize-attribute (attribute form)
+  "Give an ATTRIBUTE the correct faces with format string FORM.
 
-ATTRIBUTE is a list going attribute name, value, oldvalue, percent, and age.  An
-  attribute name is a string representing either  a stat or a condition."
+ATTRIBUTE is a list going attribute name, value, oldvalue, percent, and age.
+An attribute name is a string representing either a stat or a condition."
   (unless nethack-options-hilites
     (nethack-options-get-hilites))
   (let* ((name (nth 0 attribute))
@@ -104,22 +104,22 @@ ATTRIBUTE is a list going attribute name, value, oldvalue, percent, and age.  An
              (equal new-value "0"))
         ""
       (if face
-          (nh-propertize string 'face face)
+          (nethack-propertize string 'face face)
         string))))
 
 ;; value oldvalue percent age
-(defvar nh-status-attributes nil
+(defvar nethack-status-attributes nil
   "Alist of the attributes used.
 
 Key is a symbol, the value is a list of current, old, percent, age.")
 
-(defvar nh-status-conditions nil
+(defvar nethack-status-conditions nil
   "Alist of the NetHack conditions.
 
-See ‘nh-status-attributes’ for details on the format.")
+See ‘nethack-status-attributes’ for details on the format.")
 
-(defun nh-reset-status-variables ()
-  (setq nh-status-attributes '(("title" nil nil 0 0)
+(defun nethack-reset-status-variables ()
+  (setq nethack-status-attributes '(("title" nil nil 0 0)
                                ("strength" "0" "0" 0 0)
                                ("dexterity" "0" "0" 0 0)
                                ("constitution" "0" "0" 0 0)
@@ -141,13 +141,13 @@ See ‘nh-status-attributes’ for details on the format.")
                                ("hitpoints-max" "0" "0" 0 0)
                                ("dungeon-level" nil nil 0 0)
                                ("experience" "0" "0" 0 0))
-        nh-status-conditions (mapcar
+        nethack-status-conditions (mapcar
                               (lambda (x)
                                 (cons x
                                       '(nil nil 0 0)))
                               nethack-options-cond-all)))
 
-(defun nhapi-status-condition-update (fields)
+(defun nethack-nhapi-status-condition-update (fields)
   (let (;(new-fields (split-string fields))
         (update-field
          (lambda (field)
@@ -161,15 +161,15 @@ See ‘nh-status-attributes’ for details on the format.")
                (setcar (cddddr field) 0)))))) ; age
     (mapc
      update-field
-     nh-status-conditions)))
+     nethack-status-conditions)))
 
-(defun nhapi-status-update (field new-value percent)
-  (let* ((variable (assoc field nh-status-attributes))
+(defun nethack-nhapi-status-update (field new-value percent)
+  (let* ((variable (assoc field nethack-status-attributes))
          (old-value (cadr variable))
          (age (cadddr variable)))
     (unless (equal new-value old-value)
       ;; TODO should this be in the let?
-      (setf (alist-get field nh-status-attributes nil nil #'equal)
+      (setf (alist-get field nethack-status-attributes nil nil #'equal)
             (list new-value
                   old-value
                   percent
@@ -178,22 +178,22 @@ See ‘nh-status-attributes’ for details on the format.")
         (run-hook-with-args 'nethack-status-attribute-change-functions
                             field new-value old-value percent)))))
 
-(defun nh-status-string (format)
+(defun nethack-status-string (format)
   (mapconcat
    (lambda (ch)
-     (let ((stat (nh-status-char-to-format ch)))
+     (let ((stat (nethack-status-char-to-format ch)))
        (cond
          ((equal stat "condition")
           (mapconcat
            (lambda (x)
-             (let ((c (nh-propertize-attribute x "%s")))
+             (let ((c (nethack-propertize-attribute x "%s")))
                (when (not (string-equal c ""))
                  (concat c " "))))
-           nh-status-conditions
+           nethack-status-conditions
            ""))
          ((and (string-equal (car stat) "title") (nethack-options-set-p 'hitpointbar))
-          (let ((title-str (nth 1 (assoc "title" nh-status-attributes))))
-            (when-let* ((hp-attr (assoc "hitpoints" nh-status-attributes))
+          (let ((title-str (nth 1 (assoc "title" nethack-status-attributes))))
+            (when-let* ((hp-attr (assoc "hitpoints" nethack-status-attributes))
                         (hp-face (car (mapcan (lambda (f)
                                                 (apply (copy-tree f) (cdr hp-attr)))
                                               (nethack-options-status-hilite "hitpoints"))))
@@ -202,14 +202,14 @@ See ‘nh-status-attributes’ for details on the format.")
               (put-text-property 0 (floor (* (length title-str) (/ hp-percent 100.0))) 'face `(:inherit ,hp-face :inverse-video t) title-str))
             (concat "[" title-str "] ")))
          (stat
-          (nh-propertize-attribute
-           (assoc (car stat) nh-status-attributes)
+          (nethack-propertize-attribute
+           (assoc (car stat) nethack-status-attributes)
            (cdr stat)))                        ; String format
          (t (char-to-string ch)))))
    format nil))
 
 ;; TODO make this part of a unified defcustom array?
-(defun nh-status-char-to-format (ch)
+(defun nethack-status-char-to-format (ch)
   "Take character CH and return the format.
 
 If CH is the character “f” for “conditions”, then the string “condition” is
@@ -242,67 +242,67 @@ If CH is the character “f” for “conditions”, then the string “conditio
     (?v '("version" . "\n%s"))))
 
 ;; This is called upon from the C half, so it should be prefixed
-;; “nhapi-” rather than “nh-”.
-(defun nhapi-print-status ()
+;; “nethack-nhapi-” rather than “nethack-”.
+(defun nethack-nhapi-print-status ()
   ;; title value oldvalue percent age
-  (setq nh-status-attributes
+  (setq nethack-status-attributes
         (mapcar
          (lambda (attr)
            (append (butlast attr 1) (list (1+ (nth 4 attr)))))
-         nh-status-attributes))
-  (setq nh-status-conditions
+         nethack-status-attributes))
+  (setq nethack-status-conditions
         (mapcar
          (lambda (attr)
            (append (butlast attr 1) (list (1+ (nth 4 attr)))))
-         nh-status-conditions))
+         nethack-status-conditions))
   (cl-case nethack-status-style
     (:header-line
-     (with-current-buffer nh-map-buffer
+     (with-current-buffer nethack-map-buffer
        (setq header-line-format
-             (nh-status-string nethack-status-header-line-format))))
+             (nethack-status-string nethack-status-header-line-format))))
     (:mode-line
      (setq mode-line-format
-           (nh-status-string nethack-status-mode-line-format)))
+           (nethack-status-string nethack-status-mode-line-format)))
     (:map
-     (with-current-buffer nh-map-buffer
+     (with-current-buffer nethack-map-buffer
        (let ((p (next-single-property-change (point-min) 'nethack-status))
              (inhibit-read-only t))
          (when p
            (delete-region p (point-max)))
-         (nh-with-point
+         (nethack-with-point
           (goto-char (point-max))
-          (insert (propertize (nh-status-string nethack-status-buffer-format) 'nethack-status t))))))
+          (insert (propertize (nethack-status-string nethack-status-buffer-format) 'nethack-status t))))))
     (t
-     (with-current-buffer nh-status-buffer
+     (with-current-buffer nethack-status-buffer
        (let ((inhibit-read-only t))
          (erase-buffer)
-         (insert (nh-status-string nethack-status-buffer-format)))))))
+         (insert (nethack-status-string nethack-status-buffer-format)))))))
 
 
 
 ;;; Menu code:
-(defun nhapi-menu-putstr (menuid attr str)
+(defun nethack-nhapi-menu-putstr (menuid attr str)
   "On buffer associated with MENUID, insert with ATTR the STR."
-  (with-current-buffer (nh-menu-buffer menuid)
+  (with-current-buffer (nethack-menu-buffer menuid)
     (let ((inhibit-read-only t))
       (cond (t (goto-char (point-max))
-               (insert (nh-propertize str
+               (insert (nethack-propertize str
                                       'face
-                                      (nh-attr-face attr))
+                                      (nethack-attr-face attr))
                        "\n"))))))
 
-(defun nhapi-message (attr str)
-  "Insert STR to `nh-message-buffer' using ATTR face.
+(defun nethack-nhapi-message (attr str)
+  "Insert STR to `nethack-message-buffer' using ATTR face.
 FIXME: doesnt actually use ATTR!"
-  (nh-message attr str))
+  (nethack-message attr str))
 
-(defun nhapi-message-nohistory (_attr str)
+(defun nethack-nhapi-message-nohistory (_attr str)
   "Display STR in echo area.
 
 This is used when the ATR_NOHISTORY bit in a message is set."
   (message "%s" str))
 
-(defconst nh-colors
+(defconst nethack-colors
   [nethack-black-face nethack-red-face nethack-green-face nethack-brown-face
                       nethack-blue-face nethack-magenta-face nethack-cyan-face
                       nethack-gray-face nethack-dark-gray-face
@@ -351,9 +351,9 @@ Values taken from
 http://fileformats.archiveteam.org/wiki/DEC_Special_Graphics_Character_Set,
 accessed 2021-04-23.")
 
-(defun nhapi-print-glyph (x y color glyph tile ch &optional attr)
-  "Insert glyph into `nh-map-buffer'."
-  (set-buffer nh-map-buffer)
+(defun nethack-nhapi-print-glyph (x y color glyph tile ch &optional attr)
+  "Insert glyph into `nethack-map-buffer'."
+  (set-buffer nethack-map-buffer)
   (setq x (- x 1))                      ; FIXME: put this hack in C
   (let ((inhibit-read-only t))
     (cond
@@ -380,7 +380,7 @@ accessed 2021-04-23.")
                            glyph
                            ,glyph))))
 
-(defun nhapi-yn-function (ques choices default)
+(defun nethack-nhapi-yn-function (ques choices default)
   ""
   (let (key)
     ;; convert string of choices to a list of ints
@@ -393,24 +393,24 @@ accessed 2021-04-23.")
     ;; Add some special keys of our own to the choices
     (setq choices (cons 13 choices))
 
-    (setq key (nh-read-char (concat ques " ")))
+    (setq key (nethack-read-char (concat ques " ")))
     (when (> (length choices) 1)
       (while (not (member key choices))
-        (setq key (nh-read-char (concat
+        (setq key (nethack-read-char (concat
                                  (format "(bad %d) " key)
                                  ques " ")))))
     ;; 13, 27, and 7 are abort keys
-    (nh-send (if (or (= 13 key)
+    (nethack-send (if (or (= 13 key)
                      (= 27 key)
                      (= 7 key))
                  default
                key))))
 
-(defun nhapi-ask-direction (prompt)
+(defun nethack-nhapi-ask-direction (prompt)
   "Prompt the user for a direction"
-  (let ((cmd (lookup-key nh-map-mode-map
-                         (nh-read-key-sequence-vector prompt))))
-    (nh-send
+  (let ((cmd (lookup-key nethack-map-mode-map
+                         (nethack-read-key-sequence-vector prompt))))
+    (nethack-send
      (cond ((eq cmd 'nethack-command-north) "n")
            ((eq cmd 'nethack-command-south) "s")
            ((eq cmd 'nethack-command-west) "w")
@@ -425,29 +425,29 @@ accessed 2021-04-23.")
            ((eq cmd 'nethack-command-search) "self")
            (t "nowhere")))))
 
-(defun nhapi-askname ()
+(defun nethack-nhapi-askname ()
   "Prompt the user for their name."
-  (nh-send (nh-read-line "Who are you? ")))
+  (nethack-send (nethack-read-line "Who are you? ")))
 
-(defun nhapi-getlin (ques)
+(defun nethack-nhapi-getlin (ques)
   ""
-  (nh-send (condition-case nil
-               (nh-read-line (concat ques " "))
+  (nethack-send (condition-case nil
+               (nethack-read-line (concat ques " "))
              (quit ""))))
 
-(defun nhapi-get-ext-cmd (cmd-alist)
+(defun nethack-nhapi-get-ext-cmd (cmd-alist)
   "Get an extended command from the user."
-  (nhapi-choose-attribute "# " cmd-alist ""))
+  (nethack-nhapi-choose-attribute "# " cmd-alist ""))
 
-(defun nhapi-player-selection ()
+(defun nethack-nhapi-player-selection ()
   "Does nothing right now, perhaps simply indicates that the
-nhapi-choose-X calls are to follow for actual
+nethack-nhapi-choose-X calls are to follow for actual
 role/race/gender/align selection.")
 
-(defun nhapi-choose-attribute (prompt alist abort)
+(defun nethack-nhapi-choose-attribute (prompt alist abort)
   "Prompts user for an element from the cars of ALIST and returns the
 corresponding cdr."
-  (nh-send
+  (nethack-send
    (if (> (length alist) 1)
        (let ((completion-ignore-case t))
          (condition-case nil
@@ -455,40 +455,40 @@ corresponding cdr."
            (quit abort)))
      (cdar alist))))
 
-(defvar nh-directory nil
+(defvar nethack-directory nil
   "Location of the nethack directory.
 
-This is set when the process starts by `nhapi-init-nhwindows'.
+This is set when the process starts by `nethack-nhapi-init-nhwindows'.
 Do not edit the value of this variable.  Instead, change the value of
 `nethack-program'.")
 
-(defun nhapi-display-file (str complain)
-  (if-let ((file (concat nh-directory str))
+(defun nethack-nhapi-display-file (str complain)
+  (if-let ((file (concat nethack-directory str))
            ((file-exists-p file)))
       (view-file file)
-    (if-let* ((default-directory (make-temp-file "nh-dlb" t))
-              (nhdat-file (concat nh-directory "nhdat"))
-              (dlb-exe (cond ((locate-file "dlb" (list nh-directory)))
+    (if-let* ((default-directory (make-temp-file "nethack-dlb" t))
+              (nhdat-file (concat nethack-directory "nhdat"))
+              (dlb-exe (cond ((locate-file "dlb" (list nethack-directory)))
                              ((car-safe (directory-files-recursively
-                                         (locate-dominating-file nh-directory (lambda (dir) (directory-files dir t "games"))) "dlb"))))))
+                                         (locate-dominating-file nethack-directory (lambda (dir) (directory-files dir t "games"))) "dlb"))))))
         (unless (or (ignore-errors
                       (call-process dlb-exe nil nil nil "xf" nhdat-file str)
                       (view-file str))
                     (not complain))
           (message "Cannot find file %s" str)))))
 
-(defvar nh-inventory-need-update nil
+(defvar nethack-inventory-need-update nil
   "If non-nil, at the next command prompt, update the menu.")
 
-(defun nhapi-update-inventory ()
-  (setq nh-inventory-need-update t))
+(defun nethack-nhapi-update-inventory ()
+  (setq nethack-inventory-need-update t))
 
-(defun nhapi-doprev-message ()
+(defun nethack-nhapi-doprev-message ()
   ""
   (cl-case nethack-message-style
     (:map
-     (nh-clear-message)
-     (nh-message 'atr-none nh-last-message))
+     (nethack-clear-message)
+     (nethack-message 'atr-none nethack-last-message))
     (t
      (save-selected-window
        (save-current-buffer             ; is this redundant since we
@@ -497,26 +497,26 @@ Do not edit the value of this variable.  Instead, change the value of
          (walk-windows (lambda (w)
                          (select-window w)
                          (set-buffer (window-buffer))
-                         (when (eq (current-buffer) nh-message-buffer)
+                         (when (eq (current-buffer) nethack-message-buffer)
                            (scroll-down)))))))))
 
-(defun nhapi-update-positionbar (features) "")
+(defun nethack-nhapi-update-positionbar (features) "")
 
-(defun nhapi-init-nhwindows (executable &rest args)
+(defun nethack-nhapi-init-nhwindows (executable &rest args)
   "This is the first function sent by the nethack process.  Does
 all of the appropriate setup."
-  (setq nh-directory (file-name-directory executable))
+  (setq nethack-directory (file-name-directory executable))
   ;; clean up old buffers
-  (mapc (lambda (b) (kill-buffer (cdr b))) nh-menu-buffer-table)
-  (setq nh-menu-buffer-table nil)
-  (when (get-buffer nh-raw-print-buffer-name)
-    (kill-buffer nh-raw-print-buffer-name)))
+  (mapc (lambda (b) (kill-buffer (cdr b))) nethack-menu-buffer-table)
+  (setq nethack-menu-buffer-table nil)
+  (when (get-buffer nethack-raw-print-buffer-name)
+    (kill-buffer nethack-raw-print-buffer-name)))
 
-(defun nhapi-exit-nhwindows (str)
+(defun nethack-nhapi-exit-nhwindows (str)
   "Print the message in STR to the raw print buffer."
-  (nhapi-raw-print str))
+  (nethack-nhapi-raw-print str))
 
-(defun nhapi-create-message-window ()
+(defun nethack-nhapi-create-message-window ()
   "Create the message buffer."
   (cl-case nethack-message-style
     (:map
@@ -524,53 +524,53 @@ all of the appropriate setup."
      ;; the map is set up.
      (with-current-buffer (get-buffer-create "*nethack map*")
        (let ((inhibit-read-only t))
-         (insert (make-string nh-map-width 32) "\n"))))
+         (insert (make-string nethack-map-width 32) "\n"))))
     (t
      (with-current-buffer (get-buffer-create "*nethack message*")
-       (nh-message-mode)
+       (nethack-message-mode)
        (let ((inhibit-read-only t))
          (erase-buffer))
-       (setq nh-message-highlight-overlay
+       (setq nethack-message-highlight-overlay
              (make-overlay (point-max) (point-max)))
-       (overlay-put nh-message-highlight-overlay
+       (overlay-put nethack-message-highlight-overlay
                     'face 'nethack-message-highlight-face)
-       (setq nh-message-buffer (current-buffer))))))
+       (setq nethack-message-buffer (current-buffer))))))
 
-(defun nhapi-create-status-window ()
+(defun nethack-nhapi-create-status-window ()
   "Create the status buffer."
   (with-current-buffer (get-buffer-create "*nethack status*")
-    (nh-status-mode)
+    (nethack-status-mode)
     (let ((inhibit-read-only t))
       (erase-buffer)
-      (setq nh-status-buffer (current-buffer)))))
+      (setq nethack-status-buffer (current-buffer)))))
 
-(defun nhapi-create-map-window ()
+(defun nethack-nhapi-create-map-window ()
   "Created the map buffer."
-  (when (not (buffer-live-p nh-map-buffer))
+  (when (not (buffer-live-p nethack-map-buffer))
     (with-current-buffer (get-buffer-create "*nethack map*")
-      (nh-map-mode)
-      (setq nh-map-buffer (current-buffer)))))
+      (nethack-map-mode)
+      (setq nethack-map-buffer (current-buffer)))))
 
-(defun nhapi-create-inventory-window (menuid)
+(defun nethack-nhapi-create-inventory-window (menuid)
   "Create the inventory window."
-  (when (not (buffer-live-p nh-inventory-buffer))
-  (with-current-buffer (nhapi-create-menu 'menu menuid)
+  (when (not (buffer-live-p nethack-inventory-buffer))
+  (with-current-buffer (nethack-nhapi-create-menu 'menu menuid)
     (rename-buffer "*nethack inventory*")
-    (nh-menu-mode nil)
+    (nethack-menu-mode nil)
     (setq buffer-read-only t)
-    (setq nh-inventory-buffer (current-buffer)))))
+    (setq nethack-inventory-buffer (current-buffer)))))
 
-(defun nhapi-create-menu-window (menuid)
+(defun nethack-nhapi-create-menu-window (menuid)
   "Create a menu window."
-  (with-current-buffer (nhapi-create-menu 'menu menuid)
+  (with-current-buffer (nethack-nhapi-create-menu 'menu menuid)
     (setq buffer-read-only t)))
 
-(defun nhapi-create-text-window (menuid)
+(defun nethack-nhapi-create-text-window (menuid)
   "Create a text window."
   ;; text windows are treated as "pick-none" menu windows
-  (nhapi-create-menu 'text menuid))
+  (nethack-nhapi-create-menu 'text menuid))
 
-(defun nhapi-create-menu (type menuid)
+(defun nethack-nhapi-create-menu (type menuid)
   "Return a newly created buffer and add it to the menu table.
 
 The TYPE argument is legacy and serves no real purpose."
@@ -580,18 +580,18 @@ The TYPE argument is legacy and serves no real purpose."
       (setq buffer-read-only nil)
       (erase-buffer)
       (kill-all-local-variables))
-    (push (cons menuid buf) nh-menu-buffer-table)
+    (push (cons menuid buf) nethack-menu-buffer-table)
     buf))
 
-(defun nhapi-clear-message ()
-  "Move overlay off the last message in `nh-message-buffer'."
-  (nh-clear-message))
+(defun nethack-nhapi-clear-message ()
+  "Move overlay off the last message in `nethack-message-buffer'."
+  (nethack-clear-message))
 
-(defconst nh-map-width 79 "Max width of the map.")
-(defconst nh-map-height 22 "Max height of the map.")
-(defun nhapi-clear-map ()
+(defconst nethack-map-width 79 "Max width of the map.")
+(defconst nethack-map-height 22 "Max height of the map.")
+(defun nethack-nhapi-clear-map ()
   "Clear the map."
-  (with-current-buffer nh-map-buffer
+  (with-current-buffer nethack-map-buffer
     (let ((inhibit-read-only t))
       (erase-buffer)
       (setq gamegrid-use-glyphs nil)  ; dont try to use gamegrid glyphs
@@ -601,52 +601,52 @@ The TYPE argument is legacy and serves no real purpose."
                             nethack-map-height
                             ?\ ))))
 
-(defun nhapi-block ()
+(defun nethack-nhapi-block ()
   (cl-case nethack-prompt-style
     (:map
-     (nh-display-message-in-map "" t)
-     (nhapi-clear-message))
+     (nethack-display-message-in-map "" t)
+     (nethack-nhapi-clear-message))
     (t
-     ;;(nh-read-char "nethack: -- more --")
+     ;;(nethack-read-char "nethack: -- more --")
      (read-from-minibuffer "--more--")))
-  (nh-send 'block-dummy))
+  (nethack-send 'block-dummy))
 
-(defvar nh-active-menu-buffer nil)
-(defvar nh-menu-how nil
+(defvar nethack-active-menu-buffer nil)
+(defvar nethack-menu-how nil
   "One of pick-one, pick-none, pick-any.")
 
-(defun nhapi-display-menu (menuid)
-  (with-current-buffer (nh-menu-buffer menuid)
-    (let ((window (and nh-message-buffer
-                       (get-buffer-window nh-message-buffer)))
+(defun nethack-nhapi-display-menu (menuid)
+  (with-current-buffer (nethack-menu-buffer menuid)
+    (let ((window (and nethack-message-buffer
+                       (get-buffer-window nethack-message-buffer)))
           (size (count-lines (point-min) (point-max))))
       (if (or (not window)
               (>= size (window-height window)))
-          (nhapi-select-menu menuid 'pick-none)
-        (nhapi-message 'atr-none
+          (nethack-nhapi-select-menu menuid 'pick-none)
+        (nethack-nhapi-message 'atr-none
                        (buffer-substring (point-min)
                                          (- (point-max) 1)))
-        (nh-send 'dummy)))))
+        (nethack-send 'dummy)))))
 
-(defun nhapi-destroy-menu (menuid)
+(defun nethack-nhapi-destroy-menu (menuid)
   (save-current-buffer
-    (let ((buffer (nh-menu-buffer menuid)))
+    (let ((buffer (nethack-menu-buffer menuid)))
       (delete-windows-on buffer nil)
       (kill-buffer buffer)
-      (setq nh-menu-buffer-table
-            (nh-assq-delete-all menuid nh-menu-buffer-table)))))
+      (setq nethack-menu-buffer-table
+            (nethack-assq-delete-all menuid nethack-menu-buffer-table)))))
 
-(defun nh-menu-mode (how)
+(defun nethack-menu-mode (how)
   "Major mode for Nethack menus.
 
-\\{nh-menu-mode-map}"
+\\{nethack-menu-mode-map}"
   (setq mode-name (string-join `("NetHack Menu" ,(when how (symbol-name how))) " "))
-  (setq major-mode 'nh-menu-mode)
-  (use-local-map nh-menu-mode-map)
-  (setq nh-menu-how how)
+  (setq major-mode 'nethack-menu-mode)
+  (use-local-map nethack-menu-mode-map)
+  (setq nethack-menu-how how)
   (run-hooks 'nethack-menu-mode-hook))
 
-(defun nh-menu-toggle-item (&optional count)
+(defun nethack-menu-toggle-item (&optional count)
   "Toggle the menu item that is associated with the key event that
 triggered this function call, if it is a valid option.
 
@@ -655,7 +655,7 @@ Does nothing if this is a pick-none menu.
 Automatically submits menu if this is a pick-one menu and an option
 was actually toggled."
   (interactive "P")
-  (unless (eq nh-menu-how 'pick-none)
+  (unless (eq nethack-menu-how 'pick-none)
     (let ((case-fold-search nil)
           (menu-item-rx (format "^[%c] \\([-+]\\|[0-9]+\\) .+$"
                                 last-command-event))
@@ -677,44 +677,44 @@ was actually toggled."
                   (insert "+")
                 (insert "-")))
             (beginning-of-line)
-            (when (eq nh-menu-how 'pick-one)
-              (nh-menu-submit)))
+            (when (eq nethack-menu-how 'pick-one)
+              (nethack-menu-submit)))
         (message "No such menu option: %c" last-command-event)
         (goto-char old-point)))))
 
-(defun nh-menu-toggle-all-items ()
+(defun nethack-menu-toggle-all-items ()
   "Toggle all menu items, only for pick-any menus."
   (interactive)
-  (when (eq nh-menu-how 'pick-any)
+  (when (eq nethack-menu-how 'pick-any)
     (save-excursion
       (let ((inhibit-read-only t))
         (goto-char (point-min))
-        (while (re-search-forward nh-menu-item-regexp nil t)
+        (while (re-search-forward nethack-menu-item-regexp nil t)
           (let ((value (match-string 2)))
             (if (string-equal value "-")
                 (replace-match "+" nil nil nil 2)
               (replace-match "-" nil nil nil 2))))))))
 
-(defun nh-menu-goto-next ()
+(defun nethack-menu-goto-next ()
   "Move to the next selectable menu item."
   (interactive)
   (let ((old-point (point)))
     (goto-char (line-end-position))
-    (goto-char (if (re-search-forward nh-menu-item-regexp nil t)
+    (goto-char (if (re-search-forward nethack-menu-item-regexp nil t)
                    (line-beginning-position)
                  old-point))))
 
-(defun nh-menu-goto-prev ()
+(defun nethack-menu-goto-prev ()
   "Move to the previous selectable menu item."
   (interactive)
   (let ((old-point (point)))
     (goto-char (line-beginning-position))
-    (goto-char (if (re-search-backward nh-menu-item-regexp nil t)
+    (goto-char (if (re-search-backward nethack-menu-item-regexp nil t)
                    (line-beginning-position)
                  old-point))))
 
-(defvar nh-window-configuration nil)
-(defun nh-menu-submit ()
+(defvar nethack-window-configuration nil)
+(defun nethack-menu-submit ()
   "Submit the selected menu options to the nethack process.
 
 Restores the window configuration what it was before the menu was
@@ -722,7 +722,7 @@ displayed."
   (interactive)
   (goto-char (point-min))
   (let ((menu-data nil) (page -1))
-    (while (re-search-forward nh-menu-item-regexp nil t)
+    (while (re-search-forward nethack-menu-item-regexp nil t)
       (let ((accelerator (string-to-char (match-string 1)))
             (value (match-string 2)))
         (when (equal accelerator ?a) (setq page (1+ page)))
@@ -733,50 +733,50 @@ displayed."
               (t (setq value (string-to-number value))))
         (when (/= value 0)
           (setq menu-data (cons (list (max page 0)
-                                      (nh-char-to-int accelerator)
+                                      (nethack-char-to-int accelerator)
                                       value)
                                 menu-data)))))
-    (nh-send menu-data)
-    (and (window-configuration-p nh-window-configuration)
-         (set-window-configuration nh-window-configuration))
-    (setq nh-active-menu-buffer nil)))
+    (nethack-send menu-data)
+    (and (window-configuration-p nethack-window-configuration)
+         (set-window-configuration nethack-window-configuration))
+    (setq nethack-active-menu-buffer nil)))
 
-(defun nh-menu-cancel ()
+(defun nethack-menu-cancel ()
   "Dismiss a menu with out making any choices."
   (interactive)
   (let ((inhibit-read-only t))
     (goto-char (point-min))
     ;; turn off all the options
-    (while (re-search-forward nh-menu-item-regexp nil t)
+    (while (re-search-forward nethack-menu-item-regexp nil t)
       (replace-match "-" nil nil nil 1)))
-  (nh-menu-submit))
+  (nethack-menu-submit))
 
-(defvar nh-unassigned-accelerator-index 0
-  "Index into `nh-accelerator-chars' indicating the next
+(defvar nethack-unassigned-accelerator-index 0
+  "Index into `nethack-accelerator-chars' indicating the next
 accelerator that will be used in unassigned menus.")
 
-(defun nhapi-start-menu (menuid)
+(defun nethack-nhapi-start-menu (menuid)
   ""
-  (with-current-buffer (nh-menu-buffer menuid)
+  (with-current-buffer (nethack-menu-buffer menuid)
     (let ((inhibit-read-only t))
       (erase-buffer)
-      ;; we don't turn on `nh-menu-mode' yet, since we do not yet know
+      ;; we don't turn on `nethack-menu-mode' yet, since we do not yet know
       ;; "how" this menu is going to work.
-      (setq nh-unassigned-accelerator-index 0))))
+      (setq nethack-unassigned-accelerator-index 0))))
 
-(defun nh-specify-accelerator ()
-  "Return the next accelerator from `nh-accelerator-chars' specified
-by `nh-unassigned-accelerator-index'."
+(defun nethack-specify-accelerator ()
+  "Return the next accelerator from `nethack-accelerator-chars' specified
+by `nethack-unassigned-accelerator-index'."
   (prog1
-      (aref nh-accelerator-chars
-            nh-unassigned-accelerator-index)
-    (setq nh-unassigned-accelerator-index
-          (+ 1 nh-unassigned-accelerator-index))))
+      (aref nethack-accelerator-chars
+            nethack-unassigned-accelerator-index)
+    (setq nethack-unassigned-accelerator-index
+          (+ 1 nethack-unassigned-accelerator-index))))
 
-(defun nhapi-add-menu (menuid glyph tile accelerator groupacc attr str preselected)
+(defun nethack-nhapi-add-menu (menuid glyph tile accelerator groupacc attr str preselected)
   "Create a menu item out of arguments and draw it in the menu
 buffer."
-  (with-current-buffer (nh-menu-buffer menuid)
+  (with-current-buffer (nethack-menu-buffer menuid)
     (goto-char (point-max))
     (let ((inhibit-read-only t)
           (start (point)))
@@ -784,71 +784,71 @@ buffer."
           (insert str)
         (insert (format "%c %c %s"
                         (if (eq accelerator 0)
-                            (nh-specify-accelerator)
+                            (nethack-specify-accelerator)
                           accelerator)
                         (if preselected ?+ ?-)
                         str)))
-      (put-text-property start (point) 'face (nh-attr-face attr))
+      (put-text-property start (point) 'face (nethack-attr-face attr))
       (insert-char ?\n 1 nil)
       (when (nethack-options-set-p 'menucolors)
         (nethack-options-highlight-menu))
       (run-hooks 'nethack-add-menu-hook))))
 
 ;; FIXME: xemacs propertize bug here
-(defun nhapi-end-menu (window prompt)
-  (with-current-buffer (nh-menu-buffer window)
+(defun nethack-nhapi-end-menu (window prompt)
+  (with-current-buffer (nethack-menu-buffer window)
     (let ((inhibit-read-only t))
       (goto-char (point-min))
       (unless (string-empty-p prompt)
         (insert prompt)
         (newline)))))
 
-(defun nhapi-select-menu (menuid how)
+(defun nethack-nhapi-select-menu (menuid how)
   "Display the menu given by MENUID and put the buffer in
-`nh-menu-mode'.
+`nethack-menu-mode'.
 
 Saves the current window configuration so that it can be restored when
 the menu is dismissed."
-  (let ((buffer (nh-menu-buffer menuid)))
+  (let ((buffer (nethack-menu-buffer menuid)))
     (unless buffer (error "No such menuid: %d" menuid))
-    (if nh-inventory-need-update
+    (if nethack-inventory-need-update
         (progn
-          (setq nh-inventory-need-update nil)
-          (nh-send nil))
-      (progn
-        (unless nh-active-menu-buffer
-          (setq nh-window-configuration (current-window-configuration)))
-        (if (one-window-p)
+          (setq nethack-inventory-need-update nil)
+          (nethack-send nil))
+        (progn
+          (unless nethack-active-menu-buffer
+            (setq nethack-window-configuration (current-window-configuration)))
+          (if (one-window-p)
             (switch-to-buffer buffer)
-          ;; Use the window displaying the message buffer for the menu
-          ;; buffer, if possible.
-          (let ((message-window (and nh-message-buffer
-                                     (get-buffer-window nh-message-buffer)))
-                (inventory-window (and nh-inventory-buffer
-                                       (get-buffer-window nh-inventory-buffer))))
-            (if (or (and inventory-window (equal buffer nh-inventory-buffer))
-                    (not message-window))
-                (switch-to-buffer-other-window (nh-menu-buffer menuid) t)
+            ;; Use the window displaying the message buffer for the menu
+            ;; buffer, if possible.
+            (let ((message-window (and nethack-message-buffer
+                                       (get-buffer-window nethack-message-buffer)))
+                  (inventory-window (and nethack-inventory-buffer
+                                         (get-buffer-window nethack-inventory-buffer))))
+              (if (or (and inventory-window (equal buffer nethack-inventory-buffer))
+                      (not message-window))
+                  (switch-to-buffer-other-window (nethack-menu-buffer menuid) t)
                 ;; this codepath basically means the window displaying perm_invent will be chosen to display stuff,
                 ;; *except* at game over, when it will be display in the window that usually displays the game map.
                 ;; yes, this is a stupid way of doing it.
                 (select-window message-window)
-                (switch-to-buffer-other-window (nh-menu-buffer menuid) t)))
-          ;; make window larger, if necessary
-          (let ((bh (nh-window-buffer-height (selected-window)))
-                (wh (- (window-height) 1)))
-            (when (> bh wh)
-              (enlarge-window (- bh wh)))))
-        (nh-menu-mode how)
-        (goto-char (point-min))
-        (message "Displaying menu")
-        (setq nh-active-menu-buffer buffer)))))
+                (switch-to-buffer-other-window (nethack-menu-buffer menuid) t)))
+            ;; make window larger, if necessary
+            (let ((bh (nethack-window-buffer-height (selected-window)))
+                  (wh (- (window-height) 1)))
+              (when (> bh wh)
+                (enlarge-window (- bh wh)))))
+          (nethack-menu-mode how)
+          (goto-char (point-min))
+          (message "Displaying menu")
+          (setq nethack-active-menu-buffer buffer)))))
 
-(defun nhapi-restore-window-configuration ()
+(defun nethack-nhapi-restore-window-configuration ()
   "Layout the nethack windows according to the values
 `nethack-status-window-height' and `nethack-message-window-height'."
-  (unless nh--window-configuration-before
-    (setq nh--window-configuration-before (window-state-get)))
+  (unless nethack--window-configuration-before
+    (setq nethack--window-configuration-before (window-state-get)))
 
   (set-window-dedicated-p (selected-window) nil)
   (delete-other-windows)
@@ -860,98 +860,98 @@ the menu is dismissed."
          (w-map w-left)
          (w-message w-right))
 
-    ;; By nethack 3.6.6, the nhapi-create-map-window and
-    ;; nhapi-create-inventory-window are called after
-    ;; nhapi-restore-window-configuration. This may be an issue within the source
+    ;; By nethack 3.6.6, the nethack-nhapi-create-map-window and
+    ;; nethack-nhapi-create-inventory-window are called after
+    ;; nethack-nhapi-restore-window-configuration. This may be an issue within the source
     ;; and it may be possible to patch it there, but patching it here is easier.
-    (nhapi-create-map-window)             ; We don't need an if, since these already have a check for duplicates.
+    (nethack-nhapi-create-map-window)             ; We don't need an if, since these already have a check for duplicates.
 
     (when (nethack-options-set-p "perm_invent")
-      (nhapi-create-inventory-window 3)
-      (set-window-buffer w-inventory nh-inventory-buffer)
+      (nethack-nhapi-create-inventory-window 3)
+      (set-window-buffer w-inventory nethack-inventory-buffer)
       (set-window-dedicated-p w-inventory nil))
 
-    (set-window-buffer w-map nh-map-buffer)
+    (set-window-buffer w-map nethack-map-buffer)
     (set-window-dedicated-p w-map nil)
-    (set-window-buffer w-message nh-message-buffer)
+    (set-window-buffer w-message nethack-message-buffer)
     (set-window-dedicated-p w-message nil)
-    (set-window-buffer w-status nh-status-buffer)
+    (set-window-buffer w-status nethack-status-buffer)
     (set-window-dedicated-p w-status t)
     (window-preserve-size w-status nil t)
 
-    (with-current-buffer nh-status-buffer
+    (with-current-buffer nethack-status-buffer
       (setq mode-line-format nil))
 
     (select-window w-map)))
 
 
-(defun nhapi-bell ()
+(defun nethack-nhapi-bell ()
   "Beep at user."
   (ding))
 
-(defun nhapi-wait-synch ()
+(defun nethack-nhapi-wait-synch ()
   "Does nothing.")
 
-(defun nhapi-delay-output ()
+(defun nethack-nhapi-delay-output ()
   "Sleep for 50ms."
   ;; This is the only way I can get the desired effect of a redisplay
   ;; with a short pause.  Unfortunatly, if a keypress occurs during an
   ;; "animation" we stop getting redisplays.
   (sit-for 0 50)
   ;; Tell process to continue
-  (nh-send 'dummy))
+  (nethack-send 'dummy))
 
 
-(defun nhapi-end ()
+(defun nethack-nhapi-end ()
   (message "Goodbye.")
-  (when nh--window-configuration-before
-    (window-state-put nh--window-configuration-before)
-    (setq nh--window-configuration-before nil))
+  (when nethack--window-configuration-before
+    (window-state-put nethack--window-configuration-before)
+    (setq nethack--window-configuration-before nil))
   ;; Prevent a memory leak
   (clrhash nethack-options-status-hilite-results)
   (run-hooks 'nethack-end-hook))
 
 ;; Options
-(defvar nh-options-cbreak nil)
-(defvar nh-options-dec-graphics nil)
-(defvar nh-options-echo nil)
-(defvar nh-options-ibm-graphics nil)
-(defvar nh-options-msg-history nil)
-(defvar nh-options-num-pad nil)
-(defvar nh-options-news nil)
-(defvar nh-options-window-inited nil)
-(defvar nh-options-vision-inited nil)
-(defvar nh-options-menu-tab-sep nil)
-(defvar nh-options-menu-requested nil)
-(defvar nh-options-num-pad-mode nil)
-(defvar nh-options-purge-monsters nil)
-(defvar nh-options-bouldersym nil)
-(defvar nh-options-travelcc nil)
-(defvar nh-options-sanity-check nil)
-(defvar nh-options-mon-polycontrol nil)
+(defvar nethack-options-cbreak nil)
+(defvar nethack-options-dec-graphics nil)
+(defvar nethack-options-echo nil)
+(defvar nethack-options-ibm-graphics nil)
+(defvar nethack-options-msg-history nil)
+(defvar nethack-options-num-pad nil)
+(defvar nethack-options-news nil)
+(defvar nethack-options-window-inited nil)
+(defvar nethack-options-vision-inited nil)
+(defvar nethack-options-menu-tab-sep nil)
+(defvar nethack-options-menu-requested nil)
+(defvar nethack-options-num-pad-mode nil)
+(defvar nethack-options-purge-monsters nil)
+(defvar nethack-options-bouldersym nil)
+(defvar nethack-options-travelcc nil)
+(defvar nethack-options-sanity-check nil)
+(defvar nethack-options-mon-polycontrol nil)
 
-(defun nhapi-options (cbreak dec-graphics echo ibm-graphics msg-history
+(defun nethack-nhapi-options (cbreak dec-graphics echo ibm-graphics msg-history
                       num-pad news window-inited vision-inited
                       menu-tab-sep menu-requested num-pad-mode
                       purge-monsters bouldersym travelcc
                       sanity-check mon-polycontrol &rest ignore)
-  (setq nh-options-cbreak cbreak)
-  (setq nh-options-dec-graphics dec-graphics)
-  (setq nh-options-echo echo)
-  (setq nh-options-ibm-graphics ibm-graphics)
-  (setq nh-options-msg-history msg-history)
-  (setq nh-options-num-pad num-pad)
-  (setq nh-options-news news)
-  (setq nh-options-window-inited window-inited)
-  (setq nh-options-vision-inited vision-inited)
-  (setq nh-options-menu-tab-sep menu-tab-sep)
-  (setq nh-options-menu-requested menu-requested)
-  (setq nh-options-num-pad-mode num-pad-mode)
-  (setq nh-options-purge-monsters purge-monsters)
-  (setq nh-options-bouldersym bouldersym)
-  (setq nh-options-travelcc travelcc)
-  (setq nh-options-sanity-check sanity-check)
-  (setq nh-options-mon-polycontrol mon-polycontrol))
+  (setq nethack-options-cbreak cbreak)
+  (setq nethack-options-dec-graphics dec-graphics)
+  (setq nethack-options-echo echo)
+  (setq nethack-options-ibm-graphics ibm-graphics)
+  (setq nethack-options-msg-history msg-history)
+  (setq nethack-options-num-pad num-pad)
+  (setq nethack-options-news news)
+  (setq nethack-options-window-inited window-inited)
+  (setq nethack-options-vision-inited vision-inited)
+  (setq nethack-options-menu-tab-sep menu-tab-sep)
+  (setq nethack-options-menu-requested menu-requested)
+  (setq nethack-options-num-pad-mode num-pad-mode)
+  (setq nethack-options-purge-monsters purge-monsters)
+  (setq nethack-options-bouldersym bouldersym)
+  (setq nethack-options-travelcc travelcc)
+  (setq nethack-options-sanity-check sanity-check)
+  (setq nethack-options-mon-polycontrol mon-polycontrol))
 
 (provide 'nethack-api)
 

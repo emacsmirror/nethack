@@ -105,7 +105,7 @@ This is used by the function ‘nethack-options-equal’.")
 
 ;; This might be called by the C half of nethack-el, hence the name is prefixed
 ;; with “nh” rather than “nethack-options”
-(defun nh-attr-face (attr)
+(defun nethack-attr-face (attr)
   "Return the face corresponding with ATTR.
 ATTR can be either a string or a symbol.  It does not matter if it is prefixed
   with “atr-” or not.  “normal” is aliased to “none” as is “underline” to
@@ -220,14 +220,14 @@ Matches if the ‘car’ of an element in ‘nethack-options’ is “hilite_sta
 
 These faces correspond to the input of ATTRIBUTES.  ATTRIBUTES should be an
   alist, indicating whether a property is a “attribute” or a “color”.  This
-  function calls on ‘nethack-options-color-face’ and ‘nh-attr-face’ to turn
+  function calls on ‘nethack-options-color-face’ and ‘nethack-attr-face’ to turn
   strings into actual faces."
   (when (equal (car attributes) 'attributes)
     (pop attributes))
   (mapcar
    (lambda (attr)
      (if (eq (car attr) 'attribute)
-         (nh-attr-face (cdr attr))
+         (nethack-attr-face (cdr attr))
        (nethack-options-color-face (cdr attr))))
    attributes))
 

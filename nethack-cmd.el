@@ -30,14 +30,14 @@
 ;;; cmd.c is the cheat sheet for this file
 
 (defmacro defun-nethack-command (fun docstr cmdstr &rest body)
-  "Define an interactive nethack command."
+  "Define an interactive nethack command: define function FUN with body BODY and docstring DOCSTR, that sends CMDSTR to Nethack process."
   ;; Note: cmdstr is evaluated twice!
   `(defun ,(intern (concat "nethack-command-" (symbol-name fun))) (&optional count)
      ,docstr
      (interactive "p")
      (unwind-protect
           (when ,cmdstr
-            (nh-send-and-wait
+            (nethack-send-and-wait
              (concat ,cmdstr " "
                      (if count
                          (number-to-string count)
@@ -104,7 +104,7 @@
 (defun-nethack-command version          ;v
   "Show version"
   "simpleversion"
-  (nhapi-message nil (nethack-el-version)))
+  (nethack-nhapi-message nil (nethack-el-version)))
 (defun-nethack-command version-and-history "Show long version and game history" "history") ;V
 
 (defun-nethack-command wield "Wield (put in use) a weapon" "wield") ;w
@@ -212,7 +212,7 @@
 (defun-nethack-command previous-message  ; ^P
   "Scroll through previously displayed game messages"
   nil ;;"doprev" FIXME: is not implemented in C
-  (nhapi-doprev-message))
+  (nethack-nhapi-doprev-message))
 
 (defun-nethack-command redraw-screen  ; ^R
   "Restores the default window configuration.
@@ -221,7 +221,7 @@ With a prefix arg, also redraws the map glyphs."
   ;; only send process a redraw if there is a prefix arg
   (and (> count 1) "redraw")
   ;; but always restore the window configuration
-  (nhapi-restore-window-configuration))
+  (nethack-nhapi-restore-window-configuration))
 
 (defun-nethack-command teleport-around-level ; ^T
   "Teleport around level"

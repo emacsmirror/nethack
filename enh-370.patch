@@ -990,7 +990,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      return (win_request_info *) 0;
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,555 @@
+@@ -0,0 +1,563 @@
++2025-09-15  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_cmd): Change "nhapi-" to "nethack-nhapi-" to
++	reflect namespace changes in lisp code.
++	(lisp_nhgetch): Likewise.
++	(lisp_get_ext_cmd): Likewise.
++
++
 +2025-09-02  George Huebner  <george@feyor.sh>
 +
 +	* ../../src/windows/GNUmakefile: Don't build TTY port.
@@ -1549,7 +1557,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --- /dev/null	2025-08-24 10:32:36.147906000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
-@@ -0,0 +1,1759 @@
+@@ -0,0 +1,1758 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -1882,12 +1890,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +#define lisp_cmd(s,body)			\
 +  do						\
 +    {						\
-+      printf("(nhapi-%s ",s);		\
++      printf("(nethack-nhapi-%s ",s);		\
 +      body;					\
 +      printf(")\n");				\
 +    }						\
 +  while (0)
-+/* #define lisp_cmd0(s) printf ("(nhapi-%s)\n", s) */
 +#define lisp_list(body)				\
 +  do						\
 +    {						\
@@ -2792,7 +2799,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +          cmd = lisp_get_cmd (cmdstr);
 +          if (cmd == -1)
 +            {
-+              printf ("(nhapi-message 'atr-none \"undefined-command %s\")\n", cmdstr);
++              printf ("(nethack-nhapi-message 'atr-none \"undefined-command %s\")\n", cmdstr);
 +            }
 +          else if (cmd_index[cmd].type == CMD_LISP)
 +            {
@@ -3149,7 +3156,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +  } else {
 +      int i;
 +
-+      printf("(nhapi-get-ext-cmd '(");
++      printf("(nethack-nhapi-get-ext-cmd '(");
 +
 +      for (i = 0; extcmdlist[i].ef_txt != (char *) 0; i++) {
 +          printf("(\"%s\" . %d)", extcmdlist[i].ef_txt, i);

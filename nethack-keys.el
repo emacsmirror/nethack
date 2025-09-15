@@ -26,18 +26,18 @@
 
 ;;; Code:
 
-(defvar nh-accelerator-chars
+(defvar nethack-accelerator-chars
   [?a ?b ?c ?d ?e ?f ?g ?h ?i ?j ?k ?l ?m ?n ?o ?p ?q ?r ?s ?t ?u ?v
       ?w ?x ?y ?z ?A ?B ?C ?D ?E ?F ?G ?H ?I ?J ?K ?L ?M ?N ?O ?P ?Q ?R ?S
       ?T ?U ?V ?W ?X ?Y ?Z ?* ?# ?$ ?:]
   "Vector of accelerator characters.")
 
-(defvar nh-accelerator-chars-regexp
-  (concat "[" (mapconcat 'char-to-string nh-accelerator-chars nil) "]")
-  "A regexp that matches one of the nh-accelerator-chars")
+(defvar nethack-accelerator-chars-regexp
+  (concat "[" (mapconcat 'char-to-string nethack-accelerator-chars nil) "]")
+  "A regexp that matches one of the nethack-accelerator-chars")
 
-(defvar nh-menu-item-regexp
-  (concat "^\\(" nh-accelerator-chars-regexp "\\) \\([-+]\\|[0-9]+\\) .+$")
+(defvar nethack-menu-item-regexp
+  (concat "^\\(" nethack-accelerator-chars-regexp "\\) \\([-+]\\|[0-9]+\\) .+$")
   "A regexp that matches a menu item.")
 
 ;; from src/options.c:
@@ -53,28 +53,28 @@
 ;;  *     ,    select     .
 ;;  *     \    deselect   -
 ;;  *     ~    invert     @
-(defvar nh-menu-mode-map
+(defvar nethack-menu-mode-map
   (let ((map (make-sparse-keymap)))
     (suppress-keymap map)
     ;; add all of the accelerator characters
     (mapc (lambda (char)
-            (define-key map (vector char) 'nh-menu-toggle-item))
-          nh-accelerator-chars)
-    (define-key map "\C-c\C-c" 'nh-menu-submit)
-    (define-key map "\C-m" 'nh-menu-submit)
-    (define-key map "\C-g" 'nh-menu-cancel)
-    (define-key map "\e\e\e" 'nh-menu-cancel)
+            (define-key map (vector char) 'nethack-menu-toggle-item))
+          nethack-accelerator-chars)
+    (define-key map "\C-c\C-c" 'nethack-menu-submit)
+    (define-key map "\C-m" 'nethack-menu-submit)
+    (define-key map "\C-g" 'nethack-menu-cancel)
+    (define-key map "\e\e\e" 'nethack-menu-cancel)
     (define-key map " " 'scroll-up)
     (define-key map "\C-?" 'scroll-down)
-    (define-key map "\t" 'nh-menu-goto-next)
-    (define-key map "\e\t" 'nh-menu-goto-prev)
-    (define-key map "," 'nh-menu-toggle-all-items)
-    (define-key map "-" 'nh-menu-toggle-all-items)
+    (define-key map "\t" 'nethack-menu-goto-next)
+    (define-key map "\e\t" 'nethack-menu-goto-prev)
+    (define-key map "," 'nethack-menu-toggle-all-items)
+    (define-key map "-" 'nethack-menu-toggle-all-items)
     map)
   "Keymap used in Nethack menus.")
 
 ;; cmd.c is where the command-key mappings are done in the nh src
-(defvar nh-map-mode-map
+(defvar nethack-map-mode-map
   (let ((map (make-sparse-keymap)))
     (suppress-keymap map)
     (define-key map "_" 'nethack-command-travel)        ;_
