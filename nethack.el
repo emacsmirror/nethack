@@ -98,11 +98,6 @@
 
 ;;; Insert variables that control how the status gets displayed here.
 
-(defcustom nethack-use-tiles nil
-  "If non-nil, use XPMs to draw tiles."
-  :type '(boolean)
-  :group 'nethack)
-
 (defcustom nethack-map-mode-hook nil
   "Functions to be called after setting up the Nethack map."
   :type '(hook)
@@ -658,12 +653,6 @@ The variable `nethack-program' is the name of the executable to run."
     (nh-reset-status-variables)
     (set-process-filter nh-proc 'nh-filter)
     (set-process-sentinel nh-proc 'nh-sentinel)))
-
-(defun nethack-toggle-tiles ()
-  "Toggle the use of tiles on the map."
-  (interactive)
-  (setq nethack-use-tiles (not nethack-use-tiles))
-  (nethack-command-redraw-screen 2))
 
 ;;;; Process code to communicate with the Nethack executable
 (defconst nh-prompt-regexp

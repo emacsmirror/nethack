@@ -357,41 +357,35 @@ accessed 2021-04-23.")
   (set-buffer nh-map-buffer)
   (setq x (- x 1))                      ; FIXME: put this hack in C
   (let ((inhibit-read-only t))
-    (if nethack-use-tiles
-        (save-excursion
-          (let ((buffer-read-only nil))
-            (goto-char (gamegrid-cell-offset x y))
-            (delete-char 1)
-            (insert-image (elt nh-tile-vector tile))))
-      (cond
-       ((or (nethack-options-set-p 'DECgraphics) (string-match-p "^DECgraphics$" (nethack-options-set-p 'symset)))
-        (nh-gamegrid-set-cell
-         x y
-         ;; For DECgraphics, lower-case letters with high bit set mean switch
-         ;; character set and render with high bit clear; user might want 8-bits
-         ;; for other characters
-         (if (or (< (logand ch #x7f) #x60)
-                 (not (logand ch #x80)))
-             ch
-           (or (cdr (assq (logxor ch #x80)
-                          nethack-dec-graphics-char))
-               ch))
-         ))
-       ((or (nethack-options-set-p 'IBMgraphics) (string-match-p "^IBMgraphics\\(?:_1\\|_2\\)?$" (nethack-options-set-p 'symset)))
-        (nh-gamegrid-set-cell x y (decode-char 'cp437 ch)))
-       (t (nh-gamegrid-set-cell x y ch)))
-      (set-text-properties (gamegrid-cell-offset x y)
-                           (1+ (gamegrid-cell-offset x y))
-                           `(face
-                             ,(list (aref nh-colors color) (nh-attr-face attr))
-                             glyph
-                             ,glyph)))))
+    (cond
+      ((or (nethack-options-set-p 'DECgraphics) (string-match-p "^DECgraphics$" (nethack-options-set-p 'symset)))
+       (nethack-gamegrid-set-cell
+        x y
+        ;; For DECgraphics, lower-case letters with high bit set mean switch
+        ;; character set and render with high bit clear; user might want 8-bits
+        ;; for other characters
+        (if (or (< (logand ch #x7f) #x60)
+                (not (logand ch #x80)))
+            ch
+          (or (cdr (assq (logxor ch #x80)
+                         nethack-dec-graphics-char))
+              ch))
+        ))
+      ((or (nethack-options-set-p 'IBMgraphics) (string-match-p "^IBMgraphics\\(?:_1\\|_2\\)?$" (nethack-options-set-p 'symset)))
+       (nethack-gamegrid-set-cell x y (decode-char 'cp437 ch)))
+      (t (nethack-gamegrid-set-cell x y ch)))
+    (set-text-properties (gamegrid-cell-offset x y)
+                         (1+ (gamegrid-cell-offset x y))
+                         `(face
+                           ,(list (aref nethack-colors color) (nethack-attr-face attr))
+                           glyph
+                           ,glyph))))
 
 (defun nhapi-yn-function (ques choices default)
   ""
   (let (key)
     ;; convert string of choices to a list of ints
-    (setq choices (mapcar 'nh-char-to-int
+    (setq choices (mapcar 'nethack-char-to-int
                           (string-to-list choices)))
 
     (when (/= default 0)
@@ -601,20 +595,12 @@ The TYPE argument is legacy and serves no real purpose."
   (with-current-buffer nh-map-buffer
     (let ((inhibit-read-only t))
       (erase-buffer)
-      (if nethack-use-tiles
-          (progn ;; FIXME: test to see if emacs is capable of tiles
-            (require 'nethack-tiles)
-            ;; initialize the map with empty tiles
-            (dotimes (i nh-map-height)
-              (dotimes (j nh-map-width)
-                (insert-image nh-empty-tile))
-              (insert (propertize "\n" 'face 'nethack-map-tile-face))))
-        (setq gamegrid-use-glyphs nil)  ; dont try to use gamegrid glyphs
-        (let (cursor-type)              ; protect from gamegrid-init clobbering
-          (gamegrid-init (make-vector 256 nil)))
-        (gamegrid-init-buffer nh-map-width
-                              nh-map-height
-                              ?\ )))))
+      (setq gamegrid-use-glyphs nil)  ; dont try to use gamegrid glyphs
+      (let (cursor-type)              ; protect from gamegrid-init clobbering
+        (gamegrid-init (make-vector 256 nil)))
+      (gamegrid-init-buffer nethack-map-width
+                            nethack-map-height
+                            ?\ ))))
 
 (defun nhapi-block ()
   (cl-case nethack-prompt-style
