@@ -34,7 +34,7 @@
 
 (defvar nethack-accelerator-chars-regexp
   (concat "[" (mapconcat #'char-to-string nethack-accelerator-chars nil) "]")
-  "A regexp that matches one of the nethack-accelerator-chars")
+  "A regexp that matches one of the `nethack-accelerator-chars'.")
 
 (defvar nethack-menu-item-regexp
   (concat "^\\(" nethack-accelerator-chars-regexp "\\) \\([-+]\\|[0-9]+\\) .+$")
@@ -67,7 +67,7 @@
     (define-key map " " #'scroll-up)
     (define-key map "\C-?" #'scroll-down)
     (define-key map "\t" #'nethack-menu-goto-next)
-    (define-key map "\e\t" #'nethack-menu-goto-prev)
+    (define-key map (kbd "S-<tab>") #'nethack-menu-goto-prev)
     (define-key map "," #'nethack-menu-toggle-all-items)
     (define-key map "-" #'nethack-menu-toggle-all-items)
     map)
@@ -80,14 +80,8 @@
     (define-key map "_" #'nethack-command-travel)        ;_
     (define-key map "^" #'nethack-command-identify-trap) ;^
 
-    ;;^[ Cancel command
-    ;; I don't think we need a cancel command (rcy)
-    ;;(define-key map "\e[" #'nethack-command-cancel)
-
     ;;^A      Redo the previous command
     (define-key map "\C-a" #'nethack-command-redo-previous)
-    ;;^C      Quit the game
-    ;;(define-key map "\C-c\C-c" #'nethack-command-quit)
     ;;^D      Kick something (usually a door, chest, or box)
     (define-key map "\C-d" #'nethack-command-kick)
     ;;^P      Toggle through previously displayed game messages
@@ -96,8 +90,6 @@
     (define-key map "\C-r" #'nethack-command-redraw-screen)
     ;;^T      Teleport around level
     (define-key map "\C-t" #'nethack-command-teleport-around-level)
-    ;;^Z      Suspend game (only if defined) (NOTE: this is useless in emacs i think)
-    (define-key map "\M-z" #'nethack-command-suspend-game)
     ;;a       Apply (use) a tool
     (define-key map "a" #'nethack-command-apply)
     ;;A       Remove all armor
@@ -234,8 +226,6 @@
     (define-key map "\\" #'nethack-command-show-discoveries)
     ;;.       Rest one move while doing nothing
     (define-key map "." #'nethack-command-rest-one-move)
-    ;;        Rest one move while doing nothing (if rest_on_space option is on)
-    ;;(define-key map " " #'nethack-command-rest-one-move)
     ;; :       Look at what is on the floor
     (define-key map ":" #'nethack-command-look-here)
     ;; ;       Show what type of thing a map symbol on the level corresponds to

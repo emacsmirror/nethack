@@ -39,7 +39,7 @@
 
 (defcustom nethack-options-file
   (pcase system-type
-    ('windows-nt (file-name-concat (getenv "USERPROFILE") "NetHack" ".nethackrc"))
+    ('windows-nt (mapconcat #'identity `(,(getenv "USERPROFILE") "NetHack" ".nethackrc") "\\"))
     (_ (expand-file-name "~/.nethackrc")))
   "The nethack configuration file.
 
@@ -48,14 +48,13 @@ parsing is also done on the Lisp-side of nethack-el."
   :type '(file)
   :group 'nethack)
 
-
-
 (defconst nethack-options-fields-percents
   '("hitpoints" "power" "experience" "experience-level")
   "List of fields highlightable by percentages.
 
-Note that “experience” and “experience-level” are compared from the start of the
-current level to the start of the next experience level.")
+Note that \"experience\" and \"experience-level\" are compared from
+the start of the current level to the start of the next experience
+level.")
 
 (defconst nethack-options-fields-text-matches
   '("alignment" "carrying-capacity" "hunger" "dungeon-level" "title")
@@ -63,8 +62,8 @@ current level to the start of the next experience level.")
 
 (defconst nethack-options-fields-characteristics
   '("strength" "dexterity" "constitution" "intelligence" "wisdom" "charisma")
-  "List of status flags that match “characteristics”.
-This is used by the function ‘nethack-options-equal’.")
+  "List of status flags that match \"characteristics\".
+This is used by the function `nethack-options-equal'.")
 
 (defconst nethack-options-fields
   (append (list "gold" "HD" "hitpoints-max" "time" "power-max" "armor-class"
@@ -72,7 +71,7 @@ This is used by the function ‘nethack-options-equal’.")
           nethack-options-fields-percents
           nethack-options-fields-text-matches
           nethack-options-fields-characteristics)
-  "List of fields “hilite_status” can act on.")
+  "List of fields \"hilite_status\" can act on.")
 
 (defconst nethack-options-cond-major-troubles
   '("Stone" "Slim" "Strngl" "FoodPois" "TermIll")
@@ -92,6 +91,9 @@ This is used by the function ‘nethack-options-equal’.")
           nethack-options-cond-movement)
   "List of all condition flags.")
 
+(defvar nethack-options nil)
+
+
 (defun nethack-options-status-field-p (field)
   (member
    (if (symbolp field)
@@ -104,14 +106,14 @@ This is used by the function ‘nethack-options-equal’.")
   "List of allowed settable text attributes.")
 
 ;; This might be called by the C half of nethack-el, hence the name is prefixed
-;; with “nh” rather than “nethack-options”
+;; with "nh" rather than "nethack-options"
 (defun nethack-attr-face (attr)
   "Return the face corresponding with ATTR.
-ATTR can be either a string or a symbol.  It does not matter if it is prefixed
-  with “atr-” or not.  “normal” is aliased to “none” as is “underline” to
-  “uline”.
-However, ATTR should be a symbol.  As of 0.13.0, the C half should give a symbol
-  which correctly resolves to an attribute, but this function is left for
+ATTR can be either a string or a symbol.  It does not matter if it is
+  prefixed with \"atr-\" or not.  \"normal\" is aliased to \"none\" as
+  is \"underline\" to \"uline\".  However, ATTR should be a symbol.
+  As of 0.13.0, the C half should give a symbol which correctly
+  resolves to an attribute, but this function is left for
   compatibility."
   (if (facep attr)
       attr
@@ -132,8 +134,8 @@ However, ATTR should be a symbol.  As of 0.13.0, the C half should give a symbol
   "Return the nethack face corresponding to COLOR.
 
 COLOR can be either a string or a symbol.  Translation is automatically done
-  between things like “lightgreen” and “bright-green”.  Also handles
-  “no-color” as “nethack-atr-none-face”."
+  between things like \"lightgreen\" and \"bright-green\".  Also handles
+  \"no-color\" as \"nethack-atr-none-face\"."
   (when (symbolp color)
     (setq color (symbol-name color)))
   (intern-soft (concat "nethack-"
@@ -153,18 +155,18 @@ COLOR can be either a string or a symbol.  Translation is automatically done
 (defvar nethack-options-menucolors nil
   "The menucolors set.
 
-Set by ‘nethack-options-get-menucolors’, which trawls through ‘nethack-options’
-and looks for the prefix “\"menucolor\"”.  This means that the data structure
-itself is buried in ‘nethack-options-parse-menucolor’.")
+Set by `nethack-options-get-menucolors', which trawls through `nethack-options'
+and looks for the prefix \"menucolor\".  This means that the data structure
+itself is buried in `nethack-options-parse-menucolor'.")
 
 (defun nethack-options-get-menucolors ()
-  "Set ‘nethack-options-menucolors’.
+  "Set `nethack-options-menucolors'.
 
-‘nethack-options-menucolors’ is set to a list of lists.  The “\"menucolor\"”
+`nethack-options-menucolors' is set to a list of lists.  The \"menucolor\"
 token is stripped away, so the first element of each element is a regexp (the
 second being the attributes).
 
-Matches if the ‘car’ of an element in ‘nethack-options’ is “\"menucolor\"”."
+Matches if the `car' of an element in `nethack-options' is \"menucolor\"."
   (setq nethack-options-menucolors
         (seq-map #'cdr
                  (seq-filter
@@ -175,21 +177,23 @@ Matches if the ‘car’ of an element in ‘nethack-options’ is “\"menucolo
 (defvar nethack-options-hilites nil
   "The status-hilites set.
 
-Set by ‘nethack-options-get-hilites’, which trawls through ‘nethack-options’ and
-looks for the prefix string “hilite_status”.  This means that the data structure
-itself is buried in ‘nethack-options-parse-hilite-status’.")
+Set by `nethack-options-get-hilites', which trawls through `nethack-options' and
+looks for the prefix string \"hilite_status\".  This means that the data structure
+itself is buried in `nethack-options-parse-hilite-status'.")
 
 (defun nethack-options-get-hilites ()
-  "Set ‘nethack-options-hilites’.
+  "Set `nethack-options-hilites'.
 
-‘nethack-options-hilites’ is set to a list of lists.  The “hilite_status” string
-is stripped away, so the first element of each element is a field.  The logic
-from field to field varies a little, so the second element is a list usually
-containing a behavior and attributes.  Sometimes there's a third list starting
-with “'else”, which contains the attributes for when the first “clause” doesn't
+`nethack-options-hilites' is set to a list of lists.  The
+\"hilite_status\" string is stripped away, so the first element of
+each element is a field.  The logic from field to field varies a
+little, so the second element is a list usually containing a behavior
+and attributes.  Sometimes there's a third list starting with \='else,
+which contains the attributes for when the first \"clause\" doesn't
 match.
 
-Matches if the ‘car’ of an element in ‘nethack-options’ is “hilite_status”."
+Matches if the `car' of an element in `nethack-options' is
+\"hilite_status\"."
   (setq nethack-options-hilites
         (seq-map #'cdr
                  (seq-filter
@@ -218,10 +222,10 @@ Matches if the ‘car’ of an element in ‘nethack-options’ is “hilite_sta
 (defun nethack-options-attr-propertize (attributes)
   "Return a list of NetHack faces.
 
-These faces correspond to the input of ATTRIBUTES.  ATTRIBUTES should be an
-  alist, indicating whether a property is a “attribute” or a “color”.  This
-  function calls on ‘nethack-options-color-face’ and ‘nethack-attr-face’ to turn
-  strings into actual faces."
+These faces correspond to the input of ATTRIBUTES.  ATTRIBUTES should
+  be an alist, indicating whether a property is a \"attribute\" or a
+  \"color\".  This function calls on `nethack-options-color-face' and
+  `nethack-attr-face' to turn strings into actual faces."
   (when (equal (car attributes) 'attributes)
     (pop attributes))
   (mapcar
@@ -234,8 +238,8 @@ These faces correspond to the input of ATTRIBUTES.  ATTRIBUTES should be an
 (defun nethack-options-substitute-conditions (behav)
   "Turn a condition string into a list of matches.
 
-For example, given a BEHAV of “movement”, returns a list of “lev”, “fly”, and
-“ride”."
+For example, given a BEHAV of \"movement\", returns a list of \"lev\",
+\"fly\", and \"ride\"."
   (pcase behav
     ((or "major_troubles"
          "major")
@@ -280,23 +284,23 @@ For example, given a BEHAV of “movement”, returns a list of “lev”, “fl
     (reverse result)))
 
 (defun nethack-options-parse-menucolor (elem)
-  "Parse a nethackrc MENUCOLOR= line.
+  "Parse a nethackrc MENUCOLOR= line ELEM.
 
 Returns an alist entry of the options set."
   (when (string-prefix-p "MENUCOLOR=" elem)
     (setq elem (string-trim-left elem "[a-zA-Z]+=")))
-  ;; In case the regexp contains “=”
-  ;; TODO: Do this without using ‘reverse’
+  ;; In case the regexp contains "="
+  ;; TODO: Do this without using `reverse'
   (setq elem (reverse (split-string elem "=" t)))
-  (setq attr (pop elem))
-  (when (stringp elem)
-    (setq elem (apply #'concat (reverse elem))))
-  (setq elem (car elem))                ; There should only be 1 item
-  ;; Remove quotes from either side of ‘elem’
-  (setq elem (substring elem 1 -1))
-  (list "menucolor"
-        elem
-        (nethack-options-parse-attr attr)))
+  (let ((attr (pop elem)))
+    (when (stringp elem)
+      (setq elem (apply #'concat (reverse elem))))
+    (setq elem (car elem))                ; There should only be 1 item
+    ;; Remove quotes from either side of `elem'
+    (setq elem (substring elem 1 -1))
+    (list "menucolor"
+          elem
+          (nethack-options-parse-attr attr))))
 
 (defun nethack-options-parse-option-1 (elem)
   ;; Cut out whitespace
@@ -305,7 +309,7 @@ Returns an alist entry of the options set."
   ;; the ":" in the regexp won't confuse this
   (if (string-match-p ":" elem)
       ;; TODO: Set this up so it auto parses things like "hilite_status"
-      ;; The string trim regexp is copied from ‘string-trim-left’.
+      ;; The string trim regexp is copied from `string-trim-left'.
       (let* ((option
               (split-string elem ":" t "[ \t\n\r]+"))
              (op (car option))
@@ -330,7 +334,7 @@ Returns a list of the options set."
    (split-string (string-trim-left elem "[a-zA-Z]+=") "," t)))
 
 (defun nethack-options-parse ()
-  "Return a parsed list of ‘nethack-options-file’.
+  "Return a parsed list of `nethack-options-file'.
 
 Maybe I should have used eieio."
   (when (file-exists-p nethack-options-file)
@@ -338,7 +342,7 @@ Maybe I should have used eieio."
       (with-temp-buffer
         (insert-file-contents nethack-options-file)
         (while (not (eobp))
-          (narrow-to-region (point) (point-at-eol))
+          (narrow-to-region (point) (line-end-position))
           ;; Skip blank lines and comments
           (unless (or (eobp)
                       (eq (char-after) ?#))
@@ -357,7 +361,7 @@ Maybe I should have used eieio."
               ;; ((string-prefix-p "MSGTYPE=" elem))
               ;; ((string-prefix-p "BINDINGS=" elem))
               ;; ((string-prefix-p "SOUND=" elem))
-              ;; I'm probably not going to process “CHOOSE” lines
+              ;; I'm probably not going to process "CHOOSE" lines
               (t nil)))
           (widen)
           (forward-line 1)))
@@ -370,10 +374,11 @@ Maybe I should have used eieio."
 
 OP can be either a symbol or a string.
 
-This only really makes sense to use it on options that don't take arguments (so
-don't use it to theck “pickup types”, but do check things like “showexp”).
-It can check these options, though it doesn't make sense to."
-  ;; There's probably a more efficient way to do this through a ‘filter’ or
+This only really makes sense to use it on options that don't take
+arguments (so don't use it to theck \"pickup types\", but do check
+things like \"showexp\").  It can check these options, though it
+doesn't make sense to."
+  ;; There's probably a more efficient way to do this through a `filter' or
   ;; something of that like but this works.
   (when (symbolp op)
     (setq op (symbol-name op)))
@@ -383,9 +388,9 @@ It can check these options, though it doesn't make sense to."
     (cadr (assoc op nethack-options))))
 
 (defun nethack-options-equal (a b)
-  "Check if two hilite names are quivalent.
+  "Check if two hilite names A and B are quivalent.
 
-Specifically, this checks for the field “characteristics”."
+Specifically, this checks for the field \"characteristics\"."
   (or (and (equal a "characteristics")
            (member b nethack-options-fields-characteristics))
       (and (equal b "characteristics")
@@ -399,10 +404,10 @@ Specifically, this checks for the field “characteristics”."
   "Return a list of functions for a string STAT.
 
 Each function takes a new-value, old-value, and percent, and returns a list of
-faces using ‘nethack-options-attr-propertize’.
+faces using `nethack-options-attr-propertize'.
 
 If STAT is a condition, then the figuring out which status hilites to give it
-is done automatically, so “Stone” will match to “major”."
+is done automatically, so \"Stone\" will match to \"major\"."
   ;; TODO actually match against characteristics
   (or (gethash stat nethack-options-status-hilite-results)
       (puthash
@@ -506,70 +511,71 @@ is done automatically, so “Stone” will match to “major”."
 (defun nethack-options-status-function (name behav attr &optional else)
   "Return a function checking for a BEHAV.
 
-Returns a function which takes a new, old, percent, and age, and computes, based
-on BEHAV, whether to return ATTR or not.
+Returns a function which takes a new, old, percent, and age, and
+computes, based on BEHAV, whether to return ATTR or not.
 
-NAME should be a string of the name of the attribute.  It is used to check
-  against things like ‘nethack-options-fields-percents’ if the BEHAV is parsable
-  as a percent.  If it isn't, it fails quietly and treats it like a textmatch.
-BEHAV should be a string representing the field to match.
-ATTR and ELSE should be lists of faces.  ATTR is returned from the function if
-  the condition matches.  As the name suggests, ELSE is returned from the
-  funciton if the condition does not match"
-  (setq percentp (and (string-suffix-p "%" behav)
-                      (member name nethack-options-fields-percents)))
-  (when percentp (setq behav (substring behav 0 -1)))
-  (if (not (string-equal name "condition"))
-      `(lambda (new old percent age)
-         (setq val (or (and (quote ,percentp) (number-to-string percent)) new))
-         (if (cond
-               (,(string-prefix-p ">=" behav)
-                (>= (string-to-number val)
-                    (string-to-number ,(substring behav 2))))
-               (,(string-prefix-p "<=" behav)
-                (<= (string-to-number val)
-                    (string-to-number ,(substring behav 2))))
-               (,(string-prefix-p "<" behav)
-                (< (string-to-number val)
-                   (string-to-number ,(substring behav 1))))
-               (,(string-prefix-p ">" behav)
-                (> (string-to-number val)
-                   (string-to-number ,(substring behav 1))))
-               (,(string-equal "always" behav)
-                t)
-               ((and ,(string-equal "up" behav)
-                     (<= age nethack-status-highlight-delay))
-                (> (string-to-number new)
-                   (string-to-number old)))
-               ((and ,(string-equal "down" behav)
-                     (<= age nethack-status-highlight-delay))
-                (< (string-to-number new)
-                   (string-to-number old)))
-               ((and ,(string-equal "changed" behav)
-                     (<= age nethack-status-highlight-delay))
-                (not (= (string-to-number new)
-                        (string-to-number old))))
-               (t
-                ;; works for both text match and absolute value
-                (string-equal val ,behav)))
+NAME should be a string of the name of the attribute.  It is used to
+  check against things like `nethack-options-fields-percents' if the
+  BEHAV is parsable as a percent.  If it isn't, it fails quietly and
+  treats it like a textmatch.  BEHAV should be a string representing
+  the field to match.  ATTR and ELSE should be lists of faces.  ATTR
+  is returned from the function if the condition matches.  As the name
+  suggests, ELSE is returned from the funciton if the condition does
+  not match"
+  (let ((percentp (and (string-suffix-p "%" behav)
+                       (member name nethack-options-fields-percents))))
+    (when percentp (setq behav (substring behav 0 -1)))
+    (if (not (string-equal name "condition"))
+        `(lambda (new old percent age)
+           (setq val (or (and (quote ,percentp) (number-to-string percent)) new))
+           (if (cond
+                 (,(string-prefix-p ">=" behav)
+                  (>= (string-to-number val)
+                      (string-to-number ,(substring behav 2))))
+                 (,(string-prefix-p "<=" behav)
+                  (<= (string-to-number val)
+                      (string-to-number ,(substring behav 2))))
+                 (,(string-prefix-p "<" behav)
+                  (< (string-to-number val)
+                     (string-to-number ,(substring behav 1))))
+                 (,(string-prefix-p ">" behav)
+                  (> (string-to-number val)
+                     (string-to-number ,(substring behav 1))))
+                 (,(string-equal "always" behav)
+                  t)
+                 ((and ,(string-equal "up" behav)
+                       (<= age nethack-status-highlight-delay))
+                  (> (string-to-number new)
+                     (string-to-number old)))
+                 ((and ,(string-equal "down" behav)
+                       (<= age nethack-status-highlight-delay))
+                  (< (string-to-number new)
+                     (string-to-number old)))
+                 ((and ,(string-equal "changed" behav)
+                       (<= age nethack-status-highlight-delay))
+                  (not (= (string-to-number new)
+                          (string-to-number old))))
+                 (t
+                  ;; works for both text match and absolute value
+                  (string-equal val ,behav)))
+               (quote ,attr)
+             (quote ,else)))
+      ;; Is a condition
+      `(lambda (new _old _percent _age)
+         (if (string-equal ,behav new)
              (quote ,attr)
-           (quote ,else)))
-    ;; Is a condition
-    `(lambda (new _old _percent _age)
-       (if (string-equal ,behav new)
-           (quote ,attr)
-         (quote ,else)))))
+           (quote ,else))))))
 
 
 
 (defun nethack-options-highlight-menu ()
   "Highlight a NetHack menu buffer.
 
-Uses ‘nethack-options-menucolors’ as a source of regexps and attributes.  The
+Uses `nethack-options-menucolors' as a source of regexps and attributes.  The
 regexps are searched through first to last, meaning that the last highlight will
 override all highlights before it.  A match will highlight an entire menu line
 at a time."
-  ;; Adapted from “nethack-example.el” by Shawn Betts <sabetts@vcn.bc.ca>.
+  ;; Adapted from "nethack-example.el" by Shawn Betts <sabetts@vcn.bc.ca>.
   (unless nethack-options-menucolors
     (nethack-options-get-menucolors))
   (save-excursion
@@ -585,10 +591,6 @@ at a time."
                                    (nethack-options-attr-propertize
                                     (cadr x)))))
             nethack-options-menucolors))))
-
-
-
-(defvar nethack-options nil)
 
 
 

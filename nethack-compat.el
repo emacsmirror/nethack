@@ -37,6 +37,16 @@
     (require 'overlay))
 
 
+(defvar nethack-map-buffer)
+(defvar nethack-map-width)
+(defvar nethack-prompt-string)
+(defvar nethack-prompt-style)
+(defvar nethack-message-buffer)
+(defvar nethack-message-style)
+(defvar nethack-message-highlight-overlay)
+(declare-function nethack-nhapi-clear-message "nethack-api")
+
+
 ;;; utility/compatibility functions
 (defun nethack-propertize (string &rest properties)
   "Add text PROPERTIES to STRING and return the new string."
@@ -56,8 +66,7 @@ Return the modified alist."
 
 (defun nethack-window-buffer-height (window)
   "Return the height (in screen lines) of the buffer that WINDOW is displaying."
-  (save-excursion
-    (set-buffer (window-buffer window))
+  (with-current-buffer (window-buffer window)
     (count-lines (point-min) (point-max))))
 
 (defvar nethack-map-read-mode-map
@@ -119,7 +128,7 @@ Return the modified alist."
      (read-from-minibuffer prompt))))
 
 (defvar nethack-last-message nil
-  "Contains the last message displayed by nethack-message.")
+  "Contains the last message displayed by `nethack-message'.")
 
 (defun nethack-display-message-in-map (str &optional block dont-restore-point)
   (setf nethack-last-message str)
@@ -139,13 +148,13 @@ Return the modified alist."
                (delete-region (point-min) (line-end-position))
                (insert (make-string nethack-map-width 32))
                (goto-char (point-min)))
-             (unless (= (point) (point-min))
+             (unless (bobp)
                (setq str (concat " " str)))
              (nethack-overwrite-insert (propertize str 'nethack-message t)))
         (unless dont-restore-point
           (goto-char old-pnt))))))
 
-(defun nethack-message (attr str &optional block dont-restore-point)
+(defun nethack-message (_attr str &optional block dont-restore-point)
   (cl-case nethack-message-style
     (:map
      (nethack-display-message-in-map str block dont-restore-point))
@@ -187,7 +196,7 @@ Return the modified alist."
                      (point-max) (point-max))))))
 
 ;; XEmacs chars are not ints
-(defalias 'nethack-char-to-int (if (fboundp #'char-to-int)
+(defalias 'nethack-char-to-int (if (fboundp 'char-to-int)
                               #'char-to-int
                             #'identity))
 
@@ -231,7 +240,7 @@ Return the modified alist."
                                 (- nethack-map-width (point))))))
 
 (defmacro nethack-with-point (&rest body)
-  "Restore the point after running body."
+  "Restore the point after running BODY."
   (let ((old-pnt (gensym)))
     `(let ((,old-pnt (point-marker)))
        (unwind-protect
@@ -240,9 +249,9 @@ Return the modified alist."
          (goto-char ,old-pnt)))))
 
 (defun nethack-gamegrid-set-cell (x y ch)
-  "Like `gamegrid-set-cell', but skips `gamegrid-set-face'; it doesn't
-work for certain characters in the IBMgraphics symset, and to my
-untrained eye it doesn't actually seem to do anything."
+  "Like `gamegrid-set-cell', but skips `gamegrid-set-face'.
+It doesn't work for certain characters in the IBMgraphics symset, and
+to my untrained eye it doesn't actually seem to do anything."
   (save-excursion
     (let ((buffer-read-only nil))
       (goto-char (gamegrid-cell-offset x y))

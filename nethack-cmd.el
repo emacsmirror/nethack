@@ -27,10 +27,16 @@
 ;;; Code:
 (require 'nethack-api)
 
+
+(declare-function nethack-send-and-wait "nethack")
+(declare-function nethack-el-version "nethack")
+
+
 ;;; cmd.c is the cheat sheet for this file
 
 (defmacro defun-nethack-command (fun docstr cmdstr &rest body)
-  "Define an interactive nethack command: define function FUN with body BODY and docstring DOCSTR, that sends CMDSTR to Nethack process."
+  "Like defun, but sends CMDSTR to nethack process before executing
+BODY."
   ;; Note: cmdstr is evaluated twice!
   `(defun ,(intern (concat "nethack-command-" (symbol-name fun))) (&optional count)
      ,docstr
@@ -42,7 +48,7 @@
                      (if count
                          (number-to-string count)
                        "1"))))
-       ,@body)))
+       (progn ,@body))))
 
 (defun-nethack-command north            ;k
   "Go north 1 space (or if number_pad is on, kick something)"
@@ -231,14 +237,6 @@ With a prefix arg, also redraws the map glyphs."
 (defun-nethack-command redo-previous    ;^A
   "Redo the previous command"
   "again")
-
-;;(defun-nethack-command suspend-game ;^Z
-;;"Suspend game (only if defined)"
-;;  "suspend")
-
-;;(defun-nethack-command cancel  ;^[
-;;"Cancel command"
-;;"")
 
 (defun-nethack-command call-monster     ;C
   "Call (name) a particular monster"

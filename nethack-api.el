@@ -1,4 +1,4 @@
-;;; nethack-api.el -- Emacs interface the lisp window-port -*- lexical-binding:t -*-
+;;; nethack-api.el --- Emacs interface the lisp window-port -*- lexical-binding:t -*-
 
 ;; Copyright (C) 2002,2003,2005  Ryan Yeske and Shawn Betts
 
@@ -23,7 +23,7 @@
 
 ;;; Commentary:
 ;;
-;; This file is the lisp side of the Nethack/C <--> Emacs/Lisp
+;; This file is the Lisp side of the Nethack/C <--> Emacs/Lisp
 ;; interface.  This is where all the work gets done.
 ;;
 ;; Originally a translation of nethack-3.3.0/doc/window.doc
@@ -35,6 +35,19 @@
 (require 'gamegrid)
 (require 'nethack-keys)
 (require 'nethack-options)
+
+
+(defvar nethack-status-style)
+(defvar nethack-status-header-line-format)
+(defvar nethack-status-mode-line-format)
+(defvar nethack-status-buffer-format)
+(defvar nethack-message-style)
+(defvar nethack-prompt-style)
+(declare-function nethack-map-mode "nethack")
+(declare-function nethack-status-mode "nethack")
+(declare-function nethack-message-mode "nethack")
+(declare-function nethack-send "nethack")
+
 
 ;;; Buffer handling
 (defvar nethack-map-buffer nil)
@@ -84,15 +97,15 @@ An attribute name is a string representing either a stat or a condition."
     (nethack-options-get-hilites))
   (let* ((name (nth 0 attribute))
          (new-value (nth 1 attribute))
-         (old-value (nth 2 attribute))
-         (percent (nth 3 attribute))
-         (age (nth 4 attribute))
+         ;; (old-value (nth 2 attribute))
+         ;; (percent (nth 3 attribute))
+         ;; (age (nth 4 attribute))
          (string (format form (or new-value "")))
          (face nil))
     (when (nethack-options-set-p "statushilites")
       (setq face
-            ;; TODO: Make this so that things like “up” takes precedence over
-            ;; “changed” work?
+            ;; TODO: Make this so that things like "up" takes precedence over
+            ;; "changed" work?
             (mapcan
              (lambda (func)
                ;; feeds the function new old percent age
@@ -116,7 +129,7 @@ Key is a symbol, the value is a list of current, old, percent, age.")
 (defvar nethack-status-conditions nil
   "Alist of the NetHack conditions.
 
-See ‘nethack-status-attributes’ for details on the format.")
+See `nethack-status-attributes' for details on the format.")
 
 (defun nethack-reset-status-variables ()
   (setq nethack-status-attributes '(("title" nil nil 0 0)
@@ -165,8 +178,8 @@ See ‘nethack-status-attributes’ for details on the format.")
 
 (defun nethack-nhapi-status-update (field new-value percent)
   (let* ((variable (assoc field nethack-status-attributes))
-         (old-value (cadr variable))
-         (age (cadddr variable)))
+         (old-value (cadr variable)))
+         ;; (age (cadddr variable)))
     (unless (equal new-value old-value)
       ;; TODO should this be in the let?
       (setf (alist-get field nethack-status-attributes nil nil #'equal)
@@ -212,8 +225,8 @@ See ‘nethack-status-attributes’ for details on the format.")
 (defun nethack-status-char-to-format (ch)
   "Take character CH and return the format.
 
-If CH is the character “f” for “conditions”, then the string “condition” is
-  returned instead."
+If CH is the character \"f\" for \"conditions\", then the string
+  \"condition\" is returned instead."
   (pcase ch
     (?n '("title" . "%s"))
     (?s '("strength" . "St:%s"))
@@ -242,7 +255,7 @@ If CH is the character “f” for “conditions”, then the string “conditio
     (?v '("version" . "\n%s"))))
 
 ;; This is called upon from the C half, so it should be prefixed
-;; “nethack-nhapi-” rather than “nethack-”.
+;; "nethack-nhapi-" rather than "nethack-".
 (defun nethack-nhapi-print-status ()
   ;; title value oldvalue percent age
   (setq nethack-status-attributes
@@ -351,7 +364,7 @@ Values taken from
 http://fileformats.archiveteam.org/wiki/DEC_Special_Graphics_Character_Set,
 accessed 2021-04-23.")
 
-(defun nethack-nhapi-print-glyph (x y color glyph tile ch &optional attr)
+(defun nethack-nhapi-print-glyph (x y color glyph _tile ch &optional attr)
   "Insert glyph into `nethack-map-buffer'."
   (set-buffer nethack-map-buffer)
   (setq x (- x 1))                      ; FIXME: put this hack in C
@@ -364,12 +377,11 @@ accessed 2021-04-23.")
         ;; character set and render with high bit clear; user might want 8-bits
         ;; for other characters
         (if (or (< (logand ch #x7f) #x60)
-                (not (logand ch #x80)))
-            ch
+                (not (zerop (lognot (logand ch #x80)))))
+                ch
           (or (cdr (assq (logxor ch #x80)
                          nethack-dec-graphics-char))
-              ch))
-        ))
+              ch))))
       ((or (nethack-options-set-p 'IBMgraphics) (string-match-p "^IBMgraphics\\(?:_1\\|_2\\)?$" (nethack-options-set-p 'symset)))
        (nethack-gamegrid-set-cell x y (decode-char 'cp437 ch)))
       (t (nethack-gamegrid-set-cell x y ch)))
@@ -381,10 +393,9 @@ accessed 2021-04-23.")
                            ,glyph))))
 
 (defun nethack-nhapi-yn-function (ques choices default)
-  ""
   (let (key)
     ;; convert string of choices to a list of ints
-    (setq choices (mapcar 'nethack-char-to-int
+    (setq choices (mapcar #'nethack-char-to-int
                           (string-to-list choices)))
 
     (when (/= default 0)
@@ -407,7 +418,7 @@ accessed 2021-04-23.")
                key))))
 
 (defun nethack-nhapi-ask-direction (prompt)
-  "Prompt the user for a direction"
+  "Prompt the user for a direction."
   (let ((cmd (lookup-key nethack-map-mode-map
                          (nethack-read-key-sequence-vector prompt))))
     (nethack-send
@@ -430,7 +441,6 @@ accessed 2021-04-23.")
   (nethack-send (nethack-read-line "Who are you? ")))
 
 (defun nethack-nhapi-getlin (ques)
-  ""
   (nethack-send (condition-case nil
                (nethack-read-line (concat ques " "))
              (quit ""))))
@@ -484,7 +494,6 @@ Do not edit the value of this variable.  Instead, change the value of
   (setq nethack-inventory-need-update t))
 
 (defun nethack-nhapi-doprev-message ()
-  ""
   (cl-case nethack-message-style
     (:map
      (nethack-clear-message)
@@ -500,9 +509,9 @@ Do not edit the value of this variable.  Instead, change the value of
                          (when (eq (current-buffer) nethack-message-buffer)
                            (scroll-down)))))))))
 
-(defun nethack-nhapi-update-positionbar (features) "")
+(defun nethack-nhapi-update-positionbar (_features))
 
-(defun nethack-nhapi-init-nhwindows (executable &rest args)
+(defun nethack-nhapi-init-nhwindows (executable &rest _args)
   "This is the first function sent by the nethack process.  Does
 all of the appropriate setup."
   (setq nethack-directory (file-name-directory executable))
@@ -699,7 +708,7 @@ was actually toggled."
   "Move to the next selectable menu item."
   (interactive)
   (let ((old-point (point)))
-    (goto-char (line-end-position))
+    (end-of-line)
     (goto-char (if (re-search-forward nethack-menu-item-regexp nil t)
                    (line-beginning-position)
                  old-point))))
@@ -708,7 +717,7 @@ was actually toggled."
   "Move to the previous selectable menu item."
   (interactive)
   (let ((old-point (point)))
-    (goto-char (line-beginning-position))
+    (beginning-of-line)
     (goto-char (if (re-search-backward nethack-menu-item-regexp nil t)
                    (line-beginning-position)
                  old-point))))
@@ -756,7 +765,6 @@ displayed."
 accelerator that will be used in unassigned menus.")
 
 (defun nethack-nhapi-start-menu (menuid)
-  ""
   (with-current-buffer (nethack-menu-buffer menuid)
     (let ((inhibit-read-only t))
       (erase-buffer)
@@ -773,7 +781,7 @@ by `nethack-unassigned-accelerator-index'."
     (setq nethack-unassigned-accelerator-index
           (+ 1 nethack-unassigned-accelerator-index))))
 
-(defun nethack-nhapi-add-menu (menuid glyph tile accelerator groupacc attr str preselected)
+(defun nethack-nhapi-add-menu (menuid _glyph _tile accelerator _groupacc attr str preselected)
   "Create a menu item out of arguments and draw it in the menu
 buffer."
   (with-current-buffer (nethack-menu-buffer menuid)
@@ -897,7 +905,7 @@ the menu is dismissed."
   ;; This is the only way I can get the desired effect of a redisplay
   ;; with a short pause.  Unfortunatly, if a keypress occurs during an
   ;; "animation" we stop getting redisplays.
-  (sit-for 0 50)
+  (sit-for 0.05)
   ;; Tell process to continue
   (nethack-send 'dummy))
 
@@ -934,7 +942,7 @@ the menu is dismissed."
                       num-pad news window-inited vision-inited
                       menu-tab-sep menu-requested num-pad-mode
                       purge-monsters bouldersym travelcc
-                      sanity-check mon-polycontrol &rest ignore)
+                      sanity-check mon-polycontrol &rest _)
   (setq nethack-options-cbreak cbreak)
   (setq nethack-options-dec-graphics dec-graphics)
   (setq nethack-options-echo echo)

@@ -1,4 +1,4 @@
-;;; nethack.el --- run Nethack as a subprocess -*- lexical-binding:t -*-
+;;; nethack.el --- Run Nethack as a subprocess -*- lexical-binding:t -*-
 
 ;; Copyright (C) 2003,2005  Ryan Yeske and Shawn Betts
 
@@ -9,7 +9,7 @@
 ;; Keywords: games
 ;; URL: https://github.com/Feyorsh/nethack-el
 
-;; Package-Requires: ((url) (tramp) cl-lib)
+;; Package-Requires: ((emacs "27.1"))
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -46,8 +46,15 @@
 (require 'dired-aux)
 
 (defgroup nethack nil
-  "Emacs lisp frontend to the lisp window port of Nethack 3.4.0."
+  "Emacs Lisp frontend to the lisp window port of Nethack."
   :group 'games)
+
+(defconst nethack-el-version "0.14.1")
+(defconst nethack-el-earliest-compatible-version "0.13.0")
+(defun nethack-el-version ()
+  "Print version of nethack-el."
+  (interactive)
+  (message "nethack-el %s" nethack-el-version))
 
 (defcustom nethack-status-window-height 4
   "Height of the status window."
@@ -86,7 +93,8 @@
   :group 'nethack)
 
 (defcustom nethack-status-style t
-  "Decides how the status will be displayed. Valid values are :map, :header-line, :mode-line, or t."
+  "Decides how the status will be displayed.
+Valid values are :map, :header-line, :mode-line, or t."
   :type '(symbol)
   :options '(:map :mode-line :header-line t)
   :group 'nethack)
@@ -114,15 +122,17 @@
   :group 'nethack)
 
 (defcustom nethack-message-style t
-  "Decides where messages appear. :map means messages display in
-the map buffer. t means in a seperate buffer."
+  "Decides where messages appear.
+:map means messages display in the map buffer.
+t means in a separate buffer."
   :type '(symbol)
   :options '(:map t)
   :group 'nethack)
 
 (defcustom nethack-prompt-style t
-  "Decides where nethack-el prompts for input. :map means in the
-map buffer. t means in the minibuffer."
+  "Decides where nethack-el prompts for input.
+:map means in the map buffer.
+t means in the minibuffer."
   :type '(symbol)
   :options '(:map t)
   :group 'nethack)
@@ -191,7 +201,7 @@ attribute, the new value, the old value, and the percent."
 
 (defface nethack-black-face
   `((t (:foreground "dark blue")))
-  "nethack black face"
+  "Nethack black face."
   :group 'nethack-faces)
 
 (defface nethack-red-face
@@ -200,7 +210,7 @@ attribute, the new value, the old value, and the percent."
     (((class color))
      (:foreground "red"))
     (t (:foreground "gray")))
-  "nethack red"
+  "Nethack red face."
   :group 'nethack-faces)
 
 (defface nethack-green-face
@@ -211,7 +221,7 @@ attribute, the new value, the old value, and the percent."
     (((class color) (background light))
      (:foreground "lime green"))
     (t (:foreground "gray")))
-  "nethack green"
+  "Nethack green face."
   :group 'nethack-faces)
 
 (defface nethack-brown-face
@@ -222,7 +232,7 @@ attribute, the new value, the old value, and the percent."
     (((class color) (background light))
      (:foreground "brown"))
     (t (:foreground "gray")))
-  "nethack brown"
+  "Nethack brown face."
   :group 'nethack-faces)
 
 (defface nethack-blue-face
@@ -233,7 +243,7 @@ attribute, the new value, the old value, and the percent."
     (((class color) (background light))
      (:foreground "dark blue"))
     (t (:foreground "gray")))
-  "nethack blue"
+  "Nethack blue face."
   :group 'nethack-faces)
 
 (defface nethack-magenta-face
@@ -244,7 +254,7 @@ attribute, the new value, the old value, and the percent."
     (((class color) (background light))
      (:foreground "dark magenta"))
     (t (:foreground "gray")))
-  "nethack magenta"
+  "Nethack magenta face."
   :group 'nethack-faces)
 
 (defface nethack-cyan-face
@@ -255,7 +265,7 @@ attribute, the new value, the old value, and the percent."
     (((class color) (background light))
      (:foreground "cyan4"))
     (t (:foreground "gray")))
-  "nethack cyan"
+  "Nethack cyan face."
   :group 'nethack-faces)
 
 (defface nethack-gray-face
@@ -266,7 +276,7 @@ attribute, the new value, the old value, and the percent."
     (((class color) (background light))
      (:foreground "darkgray"))
     (t (:foreground "gray")))
-  "nethack gray"
+  "Nethack gray face."
   :group 'nethack-faces)
 
 (defface nethack-dark-gray-face
@@ -277,7 +287,7 @@ attribute, the new value, the old value, and the percent."
     (((class color) (background light))
      (:foreground "lightgray"))
     (t (:foreground "gray")))
-  "nethack dark gray"
+  "Nethack dark gray face."
   :group 'nethack-faces)
 
 (defface nethack-orange-face
@@ -286,7 +296,7 @@ attribute, the new value, the old value, and the percent."
     (((class color))
      (:foreground "orange"))
     (t (:foreground "gray")))
-  "nethack light orange"
+  "Nethack light orange face."
   :group 'nethack-faces)
 
 (defface nethack-bright-green-face
@@ -297,7 +307,7 @@ attribute, the new value, the old value, and the percent."
     (((class color) (background light))
      (:foreground "dark green"))
     (t (:foreground "gray")))
-  "nethack bright green"
+  "Nethack bright green face."
   :group 'nethack-faces)
 
 (defface nethack-yellow-face
@@ -308,7 +318,7 @@ attribute, the new value, the old value, and the percent."
     (((class color) (background light))
      (:foreground "yellow3"))
     (t (:foreground "gray")))
-  "nethack yellow"
+  "Nethack yellow face."
   :group 'nethack-faces)
 
 (defface nethack-bright-blue-face
@@ -319,7 +329,7 @@ attribute, the new value, the old value, and the percent."
     (((class color) (background light))
      (:foreground "blue"))
     (t (:foreground "gray")))
-  "nethack bright blue"
+  "Nethack bright blue face."
   :group 'nethack-faces)
 
 (defface nethack-bright-magenta-face
@@ -328,7 +338,7 @@ attribute, the new value, the old value, and the percent."
     (((class color))
      (:foreground "magenta"))
     (t (:foreground "gray")))
-  "nethack bright magenta"
+  "Nethack bright magenta face."
   :group 'nethack-faces)
 
 (defface nethack-bright-cyan-face
@@ -339,7 +349,7 @@ attribute, the new value, the old value, and the percent."
     (((class color) (background light))
      (:foreground "cyan3"))
     (t (:foreground "gray")))
-  "nethack bright cyan"
+  "Nethack bright cyan face."
   :group 'nethack-faces)
 
 (defface nethack-white-face
@@ -350,7 +360,7 @@ attribute, the new value, the old value, and the percent."
     (((class color) (background light))
      (:foreground "black"))
     (t (:foreground "gray")))
-  "nethack white"
+  "Nethack white face."
   :group 'nethack-faces)
 
 (defface nethack-map-tile-face
@@ -373,10 +383,11 @@ attribute, the new value, the old value, and the percent."
 (defcustom nethack-build-directory
   (expand-file-name "build" nethack-el-directory)
   "The directory in which to build nethack.
-You can influence the location of the build directory by setting
-this variable.  If `nethack-program' is set to a working
-compatible version of NetHack complied with the lisp patch, then
-`nethack-build-directory' is never used."
+You can influence the location of the build directory by setting this
+variable.
+If `nethack-program' is set to a working compatible version of NetHack
+complied with the lisp patch, then `nethack-build-directory' is never
+used."
   :type '(string)
   :group 'nethack)
 
@@ -430,9 +441,9 @@ Currently, the two supported versions are 3.6.6 and 3.4.3."
 
 (defun nethack-installed-p ()
   "Determine if a patched NetHack is installed.
-Checks whether a NetHack executable exists, and if running it
-results in an output with prefix ``(nethack-nhapi-raw-print'' with the correct NetHack
-version and the correct version for the lisp-patch."
+Checks whether a NetHack executable exists, and if running it results
+in an output with prefix ``(nethack-nhapi-raw-print'' with the correct
+NetHack version and the correct version for the lisp-patch."
   (and nethack-program
        (file-executable-p nethack-program)
        (let ((version-string
@@ -458,7 +469,7 @@ the build failed.
 
 If NO-DOWNLOAD-P is non-nil, then no NetHack tarball will be
 downloaded and one will already be assumed to be in
-‘nethack-build-directory’/nethack.tgz.
+`nethack-build-directory'/nethack.tgz.
 
 If BUILD-DIRECTORY is non-nil, then `nethack-build-directory'
 will be set to BUILD-DIRECTORY.  The NetHack executable will be
@@ -492,7 +503,7 @@ The source is saved as nethack.tgz within the
                               (pcase nethack-version
                                 ("3.6.7" "3.6.7_Released")
                                 ("3.7.0" "3.7")
-                                (_ (error "Unsupported NetHack version %s" nethack-version)))
+                                (_ (user-error "Unsupported NetHack version %s" nethack-version)))
                               ".tar.gz")))
     (url-copy-file download-url (expand-file-name "nethack.tar.gz"
                                                  default-directory)
@@ -505,11 +516,11 @@ The source is saved as nethack.tgz within the
 
 (defun nethack-build-patch ()
   "Patch the NetHack source with lisp patches."
-  ;; cd nethack-src && patch -Nr- -p1 < ../../enethack-$(NH_VER_NODOTS).patch || true
+  ;; cd nethack-src && patch -Nr- -p1 < ../../enh-$(NH_VER_NODOTS).patch || true
   (let ((default-directory source-directory))
     (process-file-shell-command
      "patch -Nr- -p1"
-     (concat nethack-el-directory "enethack-" (nethack-version-nodots) ".patch"))))
+     (concat nethack-el-directory "enh-" (nethack-version-nodots) ".patch"))))
 
 (defun nethack-build-setup ()
   "Run any pre-build setup before building NetHack."
@@ -528,7 +539,7 @@ arguments).
 
 Returns the buffer of the compilation process.
 
-Requires ‘make’, ‘gcc’, ‘bison’ or ‘yacc’, ‘flex’ or ‘lex’, and
+Requires `make', `gcc', `bison' or `yacc', `flex' or `lex', and
 the ncurses-dev library for your system."
   ;; make fetch-lua && make install
   (let* ((default-directory source-directory)
@@ -541,17 +552,17 @@ the ncurses-dev library for your system."
           ;; now, so I'll just need to remember that it's currently a little
           ;; HACK-y.
           (concat (when (string= nethack-version "3.7.0") "make fetch-lua && ")
-                          "make PREFIX=" nethack-build-directory
-                          (unless (eq window-system 'windows-nt) " all install"))))
+                  "make PREFIX=" nethack-build-directory
+                  (unless (eq window-system 'windows-nt) " all install")))
          (compilation-buffer
           (compilation-start compilation-cmd t))) ; Use compilation-shell-minor-mode
 
     (if (get-buffer-window compilation-buffer)
         (select-window (get-buffer-window compilation-buffer))
       (pop-to-buffer compilation-buffer)
-    (with-current-buffer compilation-buffer
-      (setq-local compilation-error-regexp-alist nil)
-      (current-buffer))))
+      (with-current-buffer compilation-buffer
+        (setq-local compilation-error-regexp-alist nil)
+        (current-buffer)))))
 
 
 ;;; Initialization
@@ -588,7 +599,7 @@ is non-nil."
                         (or (and no-query-p "3.6.7")
                             (nethack-query-for-version)))
           (when (and (eq window-system 'windows-nt) (not (string= nethack-version "3.7.0")))
-            (error "nethack-el does not support NetHack version %s on Windows" nethack-version))
+            (user-error "NetHack version %s is not supported on Windows" nethack-version))
           (nethack-build
            (lambda ()
              (let ((msg (format "Building the NetHack program %s"
@@ -734,14 +745,12 @@ delete the contents, perhaps logging the text."
     table)
   "Syntax table used in the Nethack map.")
 
-(defun nethack-map-mode ()
+(define-derived-mode nethack-map-mode nil "NetHack Map"
   "Major mode for the main Nethack map window.
 
 \\{nethack-map-mode-map}"
   (use-local-map nethack-map-mode-map)
   (set-syntax-table nethack-map-mode-syntax-table)
-  (setq mode-name "NetHack Map")
-  (setq major-mode #'nethack-map-mode)
   ;; make scroll-other-window work on the message buffer
   (setq-local other-window-scroll-buffer nethack-message-buffer)
   (setq-local scroll-conservatively 0)  ; recenter
@@ -777,13 +786,5 @@ delete the contents, perhaps logging the text."
 (run-hooks 'nethack-load-hook)
 
 (provide 'nethack)
-
-
-;;; VERSION:
-(defconst nethack-el-version "0.14.1")
-(defconst nethack-el-earliest-compatible-version "0.13.0")
-(defun nethack-el-version ()
-  (interactive)
-  (message (format "nethack-el %s" nethack-el-version)))
 
 ;;; nethack.el ends here
