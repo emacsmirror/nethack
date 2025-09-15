@@ -42,7 +42,6 @@
 (require 'nethack-keys)
 (require 'nethack-options)
 (require 'url)
-(require 'tramp)
 (require 'dired-aux)
 
 (defgroup nethack nil
@@ -634,7 +633,7 @@ The variable `nethack-program' is the name of the executable to run."
         (when (get-buffer nethack-proc-buffer-name)
           (kill-buffer nethack-proc-buffer-name))
         (nethack-start (let ((process-environment (append (when nethack-wizmode `(,(concat "NETHACKOPTIONS=@" nethack-options-file))) nethack-environment process-environment))
-                             (default-directory (funcall (if (and nethack-wizmode (not (eq system-type 'windows-nt))) 'tramp-file-name-with-sudo 'identity) default-directory))
+                             (default-directory (concat (when (and nethack-wizmode (not (eq system-type 'windows-nt))) "/sudo::" default-directory)))
                              (nethack-program-args (append (when nethack-wizmode '("-D" "-u" "wizard")) nethack-program-args)))
                          (apply #'start-file-process "nh" nethack-proc-buffer-name
                                 nethack-program nethack-program-args)))))
