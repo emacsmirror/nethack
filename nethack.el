@@ -128,14 +128,6 @@ t means in a separate buffer."
   :options '(:map t)
   :group 'nethack)
 
-(defcustom nethack-prompt-style t
-  "Decides where nethack-el prompts for input.
-:map means in the map buffer.
-t means in the minibuffer."
-  :type '(symbol)
-  :options '(:map t)
-  :group 'nethack)
-
 (defcustom nethack-end-hook nil
   "Hook run when nethack has ended."
   :type '(hook)

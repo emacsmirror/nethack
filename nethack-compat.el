@@ -40,7 +40,6 @@
 (defvar nethack-map-buffer)
 (defvar nethack-map-width)
 (defvar nethack-prompt-string)
-(defvar nethack-prompt-style)
 (defvar nethack-message-buffer)
 (defvar nethack-message-style)
 (defvar nethack-message-highlight-overlay)
@@ -69,63 +68,8 @@ Return the modified alist."
   (with-current-buffer (window-buffer window)
     (count-lines (point-min) (point-max))))
 
-(defvar nethack-map-read-mode-map
-  (let ((m (make-sparse-keymap)))
-    ;; FIXME: this is arguably a gross hack. Create insert functions
-    ;; for numbers, letters and punctuation.
-    (dotimes (i (- 126 32))
-      (define-key m (vector (+ i 32)) #'nethack-map-read-self-insert))
-    ;; FIXME: this'll do for now
-    (define-key m (kbd "RET") #'nethack-map-read-submit)
-    m))
-
-(defun nethack-map-read-self-insert (prefix)
-  (interactive "p")
-  (self-insert-command prefix))
-
-(defun nethack-map-read-submit ()
-  (interactive)
-  (throw 'exit nil))
-
-(define-minor-mode nethack-map-read-mode ()
-  :init-value nil
-  :keymap nethack-map-read-mode-map)
-
-(defun nethack-read-from-map (prompt)
-  ;; block if there's a message so the user can read it.
-  (when (next-single-property-change (point-min) 'nethack-message)
-    (nethack-display-message-in-map "" t)
-    (nethack-nhapi-clear-message))
-  (nethack-display-message-in-map (propertize prompt 'nethack-prompt t 'rear-nonsticky t))
-  (with-current-buffer nethack-map-buffer
-    ;; setup prompt and read input
-    (nethack-with-point
-     (let ((inhibit-read-only t)
-           (local-map (current-local-map)))
-       (goto-char (next-single-property-change (point-min) 'nethack-prompt))
-       (delete-region (point) (line-end-position))
-       (nethack-map-read-mode 1)
-       (use-local-map nil)
-       (setq buffer-read-only nil)
-       (unwind-protect
-            (recursive-edit)
-         (setq buffer-read-only t)
-         (nethack-map-read-mode -1)
-         (use-local-map local-map))
-       ;; extract input
-       (goto-char (point-min))
-       (let* ((beg (next-single-property-change (point) 'nethack-prompt))
-              (line (buffer-substring beg (line-end-position))))
-         (delete-region (point-min) (line-end-position))
-         (insert (make-string nethack-map-width 32))
-         line)))))
-
 (defun nethack-read-line (prompt)
-  (cl-case nethack-prompt-style
-    (:map
-     (nethack-read-from-map prompt))
-    (t
-     (read-from-minibuffer prompt))))
+  (read-from-minibuffer prompt))
 
 (defvar nethack-last-message nil
   "Contains the last message displayed by `nethack-message'.")
@@ -202,15 +146,8 @@ Return the modified alist."
 
 
 (defun nethack-read-key-sequence-vector (prompt)
-  (cl-case nethack-prompt-style
-    (:map
-     (nethack-display-message-in-map prompt nil t)
-     (prog1
-         (read-key-sequence-vector "")
-       (nethack-nhapi-clear-message)))
-    (t
-     (let ((cursor-in-echo-area t))
-       (read-key-sequence-vector prompt)))))
+  (let ((cursor-in-echo-area t))
+    (read-key-sequence-vector prompt)))
 
 (defun nethack-read-char-in-map (&optional prompt)
   (nethack-display-message-in-map prompt nil t)
@@ -219,15 +156,11 @@ Return the modified alist."
     (nethack-char-to-int char)))
 
 (defun nethack-read-char (&optional prompt)
-  (cl-case nethack-prompt-style
-    (:map
-     (nethack-read-char-in-map prompt))
-    (t
-     (let ((cursor-in-echo-area t))
-       (message prompt)
-       (let ((char (read-char-exclusive)))
-         (message "")
-         (nethack-char-to-int char))))))
+  (let ((cursor-in-echo-area t))
+    (message prompt)
+    (let ((char (read-char-exclusive)))
+      (message "")
+      (nethack-char-to-int char))))
 
 (defun nethack-pause ()
   (while (not (memq (read-char-exclusive) '(32 13)))))

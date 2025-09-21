@@ -42,7 +42,6 @@
 (defvar nethack-status-mode-line-format)
 (defvar nethack-status-buffer-format)
 (defvar nethack-message-style)
-(defvar nethack-prompt-style)
 (declare-function nethack-map-mode "nethack")
 (declare-function nethack-status-mode "nethack")
 (declare-function nethack-message-mode "nethack")
@@ -611,13 +610,7 @@ The TYPE argument is legacy and serves no real purpose."
                             ?\ ))))
 
 (defun nethack-nhapi-block ()
-  (cl-case nethack-prompt-style
-    (:map
-     (nethack-display-message-in-map "" t)
-     (nethack-nhapi-clear-message))
-    (t
-     ;;(nethack-read-char "nethack: -- more --")
-     (read-from-minibuffer "--more--")))
+  (read-from-minibuffer "--more--")
   (nethack-send 'block-dummy))
 
 (defvar nethack-active-menu-buffer nil)
