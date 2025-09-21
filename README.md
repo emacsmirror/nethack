@@ -7,7 +7,7 @@ role-playing environment ever invented?
 You get the most advanced, elaborate, self-documenting, customizable,
 extensible, role-playing environment in the world!
 
-All of the Elisp is GPLv2, and the patches are under the modified 3-clause BSD.
+All of the Elisp is GPLv3-or-later, and the patches are under the modified 3-clause BSD.
 
 ![](./images/screenshot.png)
 
