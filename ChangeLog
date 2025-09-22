@@ -1,5 +1,12 @@
 2025-09-22  George Huebner  <george@feyor.sh>
 
+	* nethack.el (nethack-remote): New function for connecting to a
+	remote instance of nethack. Should also work with dgamelaunch (as
+	opposed to the previous bespoke nh-launch), though I haven't
+	tested it...
+
+2025-09-22  George Huebner  <george@feyor.sh>
+
 	* nethack-api.el (nethack-nhapi-display-file): If the file could
 	not be displayed locally, try asking the NetHack process for it.
 	(nethack-nhapi-receive-file): Helper function for the above.
