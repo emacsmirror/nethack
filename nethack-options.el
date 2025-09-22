@@ -333,14 +333,14 @@ Returns a list of the options set."
    #'nethack-options-parse-option-1
    (split-string (string-trim-left elem "[a-zA-Z]+=") "," t)))
 
-(defun nethack-options-parse ()
-  "Return a parsed list of `nethack-options-file'.
+(defun nethack-options-parse (file)
+  "Return a parsed list of config FILE.
 
 Maybe I should have used eieio."
-  (when (file-exists-p nethack-options-file)
+  (when (file-exists-p file)
     (let (result elem)
       (with-temp-buffer
-        (insert-file-contents nethack-options-file)
+        (insert-file-contents file)
         (while (not (eobp))
           (narrow-to-region (point) (line-end-position))
           ;; Skip blank lines and comments

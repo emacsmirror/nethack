@@ -990,12 +990,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      return (win_request_info *) 0;
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,568 @@
+@@ -0,0 +1,571 @@
 +2025-09-22  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_display_file): Query the client to check if they
 +	were able to display the requested file; if not, attempt to send
 +	it to them. Required for remote games.
++	(lisp_init_nhwindows): Give the client the config file if they
++	need it. This function was chosen because it is only executed once
++	and runs before almost all other lisp code.
 +
 +2025-09-15  George Huebner  <george@feyor.sh>
 +
@@ -1562,7 +1565,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --- /dev/null	2025-08-24 10:32:36.147906000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
-@@ -0,0 +1,1782 @@
+@@ -0,0 +1,1807 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -3102,7 +3105,32 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +void
 +lisp_init_nhwindows(int *argcp, char **argv)
 +{
++  char *need_options_file_p;
 +  int i;
++
++  lisp_cmd ("need-options-file",);
++  read_string("string", &need_options_file_p);
++
++  if (!strcmp(need_options_file_p, "t")) {
++      char buf[BUFSZ];
++      FILE *fp = fopen(get_configfile(), "r");
++
++      if (fp == NULL) {
++          Sprintf(buf, "cannot open options file %s", get_configfile());
++          lisp_cmd ("receive-file", lisp_string(buf); lisp_string("error"););;
++          return;
++      }
++
++      while (fgets(buf, BUFSZ, fp) != NULL) {
++          lisp_cmd ("receive-file", lisp_string (buf););;
++      }
++
++      fclose(fp);
++      lisp_cmd ("receive-file", lisp_string (""); lisp_t;);;
++  }
++
++  free(need_options_file_p);
++
 +
 +  /* Print each command-line option, constructing a list of strings */
 +  lisp_cmd ("init-nhwindows",
