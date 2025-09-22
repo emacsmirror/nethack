@@ -330,7 +330,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-03-31 01:40:08.895891095 -0500
-@@ -0,0 +1,536 @@
+@@ -0,0 +1,542 @@
++2025-09-22  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_display_file): Query the client to check if they
++	were able to display the requested file; if not, attempt to send
++	it to them. Required for remote games.
++
 +2025-09-15  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_cmd): Change "nhapi-" to "nethack-nhapi-" to
@@ -869,7 +875,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	function.
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-03-31 01:40:08.897561983 -0500
-@@ -0,0 +1,1834 @@
+@@ -0,0 +1,1858 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -2567,9 +2573,33 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +     const char *str;
 +     boolean complain;
 +{
++  char *success;
 +  lisp_cmd ("display-file",
 +	    lisp_string (str);
 +	    complain ? lisp_t : lisp_nil);;
++
++  read_string("string", &success);
++  if (strcmp(success, "t")) {
++      char buf[BUFSZ];
++      dlb *fp = dlb_fopen(str, "r");
++
++      if (fp == NULL) {
++          if (complain) {
++              Sprintf(buf, "cannot open file %s", str);
++              lisp_cmd ("receive-file", lisp_string (buf); lisp_string("error"););;
++          }
++          return;
++      }
++
++      while (dlb_fgets(buf, BUFSZ, fp) != NULL) {
++          lisp_cmd ("receive-file", lisp_string (buf););;
++      }
++
++      dlb_fclose(fp);
++      lisp_cmd ("receive-file", lisp_string (""); lisp_t;);;
++  }
++
++  free(success);
 +}
 +
 +char

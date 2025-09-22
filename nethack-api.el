@@ -471,20 +471,37 @@ This is set when the process starts by `nethack-nhapi-init-nhwindows'.
 Do not edit the value of this variable.  Instead, change the value of
 `nethack-program'.")
 
-(defun nethack-nhapi-display-file (str complain)
+(defvar nethack-file-receive-buffer nil
+  "Temporary buffer to receive a file from the Nethack process.")
+
+(defun nethack-nhapi-display-file (str _complain)
   (if-let ((file (concat nethack-directory str))
            ((file-exists-p file)))
       (view-file file)
-    (if-let* ((default-directory (make-temp-file "nethack-dlb" t))
-              (nhdat-file (concat nethack-directory "nhdat"))
-              (dlb-exe (cond ((locate-file "dlb" (list nethack-directory)))
-                             ((car-safe (directory-files-recursively
-                                         (locate-dominating-file nethack-directory (lambda (dir) (directory-files dir t "games"))) "dlb"))))))
-        (unless (or (ignore-errors
-                      (call-process dlb-exe nil nil nil "xf" nhdat-file str)
-                      (view-file str))
-                    (not complain))
-          (message "Cannot find file %s" str)))))
+    (let* ((default-directory (make-temp-file "nethack-dlb" t))
+           (nhdat-file (concat nethack-directory "nhdat"))
+           (dlb-exe (cond ((locate-file "dlb" (list nethack-directory)))
+                          ((car-safe (when (file-exists-p nethack-directory) (directory-files-recursively
+                                                                              (locate-dominating-file nethack-directory (lambda (dir) (directory-files dir t "games"))) "dlb")))))))
+      (unless (ignore-errors
+                (call-process dlb-exe nil nil nil "xf" nhdat-file str)
+                (view-file str)
+                (nethack-send t))
+        ;; if fetching file locally was unsuccessful, tell nethack
+        ;; process to send the file
+        (setq nethack-file-receive-buffer (generate-new-buffer str))
+        (nethack-send nil)))))
+
+(defun nethack-nhapi-receive-file (bytes &optional eof)
+  ;; PERF: if this function ends up being a bottleneck, we could use
+  ;; zlib to reduce the size of lisp messages
+  (with-current-buffer nethack-file-receive-buffer
+    (insert bytes))
+  (when eof
+    (if (string= eof "error") ;; only signaled if complain was t
+        (message bytes)
+      (view-buffer nethack-file-receive-buffer)
+      (setq nethack-file-receive-buffer nil))))
 
 (defvar nethack-inventory-need-update nil
   "If non-nil, at the next command prompt, update the menu.")

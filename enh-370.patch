@@ -990,14 +990,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      return (win_request_info *) 0;
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,563 @@
+@@ -0,0 +1,568 @@
++2025-09-22  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_display_file): Query the client to check if they
++	were able to display the requested file; if not, attempt to send
++	it to them. Required for remote games.
++
 +2025-09-15  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_cmd): Change "nhapi-" to "nethack-nhapi-" to
 +	reflect namespace changes in lisp code.
 +	(lisp_nhgetch): Likewise.
 +	(lisp_get_ext_cmd): Likewise.
-+
 +
 +2025-09-02  George Huebner  <george@feyor.sh>
 +
@@ -1557,7 +1562,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --- /dev/null	2025-08-24 10:32:36.147906000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
-@@ -0,0 +1,1758 @@
+@@ -0,0 +1,1782 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -3172,9 +3177,33 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +void
 +lisp_display_file(const char *str, boolean complain)
 +{
++  char *success;
 +  lisp_cmd ("display-file",
 +	    lisp_string (str);
 +	    complain ? lisp_t : lisp_nil);;
++
++  read_string("string", &success);
++  if (strcmp(success, "t")) {
++      char buf[BUFSZ];
++      dlb *fp = dlb_fopen(str, "r");
++
++      if (fp == NULL) {
++          if (complain) {
++              Sprintf(buf, "cannot open file %s", str);
++              lisp_cmd ("receive-file", lisp_string (buf); lisp_string("error"););;
++          }
++          return;
++      }
++
++      while (dlb_fgets(buf, BUFSZ, fp) != NULL) {
++          lisp_cmd ("receive-file", lisp_string (buf););;
++      }
++
++      dlb_fclose(fp);
++      lisp_cmd ("receive-file", lisp_string (""); lisp_t;);;
++  }
++
++  free(success);
 +}
 +
 +char
