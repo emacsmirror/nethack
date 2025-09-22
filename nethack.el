@@ -622,6 +622,7 @@ The variable `nethack-program' is the name of the executable to run."
             (message "NetHack process already running...")
             (nethack-nhapi-restore-window-configuration))
         ;; Start the process.
+        (nethack-kill-buffers)
         (when (get-buffer nethack-proc-buffer-name)
           (kill-buffer nethack-proc-buffer-name))
         (nethack-start (let ((process-environment (append (when nethack-wizmode `(,(concat "NETHACKOPTIONS=@" nethack-options-file))) nethack-environment process-environment))
