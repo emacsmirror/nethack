@@ -685,7 +685,6 @@ where \"nethack.alt.org\" could be substituted for \"hardfought.org\".
 Assumes nethack is not already running."
   (save-excursion
     (setq nethack-proc process)
-    (setq nethack-options (nethack-options-parse))
     (nethack-reset-status-variables)
     (set-process-filter nethack-proc #'nethack-filter)
     (set-process-sentinel nethack-proc #'nethack-sentinel)))

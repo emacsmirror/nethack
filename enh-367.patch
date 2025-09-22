@@ -177,8 +177,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                         | CMD_NOT_AVAILABLE
  #endif /* SHELL */
      },
---- NetHack-NetHack-3.6.7_Released/sys/unix/Makefile.src	2023-02-15 15:52:57.000000000 -0600
-+++ nethack/sys/unix/Makefile.src	2025-03-31 01:38:34.624817803 -0500
+--- NetHack-NetHack-3.6.7_Released/sys/unix/Makefile.src	2025-09-22 17:17:42.565174425 -0500
++++ nethack/sys/unix/Makefile.src	2025-09-22 17:14:02.850263822 -0500
 @@ -266,9 +266,12 @@
  #	../win/BeOS/NHMenuWindow.cpp ../win/BeOS/NHMapWindow.cpp tile.c
  #WINBEOBJ = winbe.o NHWindow.o NHMenuWindow.o NHMapWindow.o tile.o
@@ -330,12 +330,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-03-31 01:40:08.895891095 -0500
-@@ -0,0 +1,542 @@
+@@ -0,0 +1,545 @@
 +2025-09-22  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_display_file): Query the client to check if they
 +	were able to display the requested file; if not, attempt to send
 +	it to them. Required for remote games.
++	(lisp_init_nhwindows): Give the client the config file if they
++	need it. This function was chosen because it is only executed once
++	and runs before almost all other lisp code.
 +
 +2025-09-15  George Huebner  <george@feyor.sh>
 +
@@ -875,7 +878,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	function.
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-03-31 01:40:08.897561983 -0500
-@@ -0,0 +1,1858 @@
+@@ -0,0 +1,1886 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -943,6 +946,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	"Fainted",
 +	"Starved"
 +};
++
++extern char configfile[BUFSZ];
 +
 +typedef struct
 +{
@@ -1426,6 +1431,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +int dir;
 +{
 +  /* Code to be executed on startup. */
++  return;
 +}
 +
 +void
@@ -2493,7 +2499,32 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +     int* argcp;
 +     char** argv;
 +{
++  char *need_options_file_p;
 +  int i;
++
++  lisp_cmd ("need-options-file",);
++  read_string("string", &need_options_file_p);
++
++  if (!strcmp(need_options_file_p, "t")) {
++      char buf[BUFSZ];
++      FILE *fp = fopen(configfile, "r");
++
++      if (fp == NULL) {
++          Sprintf(buf, "cannot open options file %s", configfile);
++          lisp_cmd ("receive-file", lisp_string(buf); lisp_string("error"););;
++          return;
++      }
++
++      while (fgets(buf, BUFSZ, fp) != NULL) {
++          lisp_cmd ("receive-file", lisp_string (buf););;
++      }
++
++      fclose(fp);
++      lisp_cmd ("receive-file", lisp_string (""); lisp_t;);;
++  }
++
++  free(need_options_file_p);
++
 +
 +  /* Print each command-line option, constructing a list of strings */
 +  lisp_cmd ("init-nhwindows",

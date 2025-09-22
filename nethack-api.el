@@ -498,9 +498,14 @@ Do not edit the value of this variable.  Instead, change the value of
   (with-current-buffer nethack-file-receive-buffer
     (insert bytes))
   (when eof
-    (if (string= eof "error") ;; only signaled if complain was t
+    (if (string= eof "error")
         (message bytes)
-      (view-buffer nethack-file-receive-buffer)
+      (with-current-buffer nethack-file-receive-buffer
+        (if-let ((filename (buffer-file-name)))
+            (progn (save-buffer) (kill-buffer)
+                   (when (string= eof "error") (delete-file filename))
+                   (setq nethack-options (nethack-options-parse filename)))
+            (view-buffer (current-buffer))))
       (setq nethack-file-receive-buffer nil))))
 
 (defvar nethack-inventory-need-update nil
@@ -970,6 +975,18 @@ the menu is dismissed."
   (setq nethack-options-travelcc travelcc)
   (setq nethack-options-sanity-check sanity-check)
   (setq nethack-options-mon-polycontrol mon-polycontrol))
+
+(defun nethack-nhapi-need-options-file ()
+  (if (and (file-exists-p nethack-options-file)
+           ;; remote nethack sessions use the shell, so the command is longer
+           nethack-proc
+           (= (length (process-command nethack-proc)) 1))
+      (progn
+        (nethack-send nil)
+        (setq nethack-options (nethack-options-parse nethack-options-file)))
+    (setq nethack-file-receive-buffer (find-file-noselect (make-temp-file "nethackrc")))
+    ;; nethack-options set in `nethack-nhapi-receive-file'
+    (nethack-send t)))
 
 (provide 'nethack-api)
 
