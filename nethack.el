@@ -831,6 +831,7 @@ delete the contents, perhaps logging the text."
   (setq-local other-window-scroll-buffer nethack-message-buffer)
   (setq-local scroll-conservatively 0)  ; recenter
   (setq-local scroll-margin 3)
+  (setq-local cursor-in-non-selected-windows nil)
   ;; TODO still need to figure out how to automatically scroll horizontally
   (run-hooks 'nethack-map-mode-hook))
 
