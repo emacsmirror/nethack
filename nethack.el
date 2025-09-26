@@ -383,7 +383,7 @@ used."
   :group 'nethack)
 
 (defcustom nethack-program
-  (expand-file-name (pcase window-system
+  (expand-file-name (pcase system-type
                       ('windows-nt "binary/NetHack.exe")
                       (_ "games/nethack"))
                     nethack-build-directory)
@@ -450,9 +450,7 @@ NetHack version and the correct version for the lisp-patch."
                 version-string)
                (match-string-no-properties 1 version-string))))))
 
-(defun nethack-build (&optional
-                        no-download-p
-                        build-directory)
+(defun nethack-build (&optional no-download-p build-directory)
   "Build the NetHack program in the background.
 If CALLBACK is non-nil, it should be a function.  It is called
 with the compiled executable as the single argument or nil, if
@@ -472,14 +470,8 @@ Returns the buffer of the compilation process."
     (setq-default nethack-program
                   (expand-file-name "nethack" nethack-build-directory)))
   (delete-directory nethack-build-directory t)
-  (mkdir nethack-build-directory)
-  ;; needs to make patch, hints(-3.6), and build
-  ;; make patch simply patches
-  ;; make hints runs ./setup.sh
-  ;; make hints-3.6 runs ./setup.sh hints/linux-lisp
-  ;; make build runs make all and make install in nethack-src
-  (let* ((default-directory nethack-build-directory)
-         (source-directory (expand-file-name "nethack-src" default-directory)))
+  (let* ((default-directory (file-name-directory (directory-file-name nethack-build-directory)))
+         (source-directory (expand-file-name "build" default-directory)))
     (unless no-download-p (nethack-build-download))
     (nethack-build-untar)
     (nethack-build-patch)
@@ -488,9 +480,10 @@ Returns the buffer of the compilation process."
 
 (defun nethack-build-download ()
   "Download the nethack source from nethack.org.
-The source is saved as nethack.tgz within the
+The source is saved as nethack.tar.gz within the
 `default-directory'."
-  (let* ((download-url (concat "https://github.com/NetHack/NetHack/archive/NetHack-"
+  (message "a")
+  (let ((download-url (concat "https://github.com/NetHack/NetHack/archive/NetHack-"
                               (pcase nethack-version
                                 ("3.6.7" "3.6.7_Released")
                                 ("3.7.0" "3.7")
@@ -501,13 +494,14 @@ The source is saved as nethack.tgz within the
                    t)))                 ; It's OK if it already exists.
 
 (defun nethack-build-untar ()
-  "Decompress nethack source from nethack.tar.gz to nethack-src."
+  "Decompress nethack source from nethack.tar.gz to build."
   (dired-compress-file "nethack.tar.gz")
-  (rename-file (car (file-expand-wildcards "NetHack*")) "nethack-src"))
+  (delete-file "nethack.tar.gz")
+  (rename-file (car (file-expand-wildcards "NetHack*")) "build"))
 
 (defun nethack-build-patch ()
   "Patch the NetHack source with lisp patches."
-  ;; cd nethack-src && patch -Nr- -p1 < ../../enh-$(NH_VER_NODOTS).patch || true
+  ;; cd build && patch -Nr- -p1 < ../../enh-$(NH_VER_NODOTS).patch || true
   (let ((default-directory source-directory))
     (process-file-shell-command
      "patch -Nr- -p1"
@@ -515,10 +509,10 @@ The source is saved as nethack.tgz within the
 
 (defun nethack-build-setup ()
   "Run any pre-build setup before building NetHack."
-  ;; cd nethack-src/sys/unix && $(SHELL) ./setup.sh hints/linux-lisp
+  ;; cd build/sys/unix && $(SHELL) ./setup.sh hints/linux-lisp
   ;; or on windows,
-  ;; cd nethack-src && cp sys/windows/GNUmakefile* src/
-  (pcase window-system
+  ;; cd build && cp sys/windows/GNUmakefile* src/
+  (pcase system-type
     ('windows-nt (mapcar (lambda (f) (copy-file f (expand-file-name (concat "src/" (file-name-nondirectory f)) source-directory))) (file-expand-wildcards (expand-file-name "sys/windows/GNUmakefile*" source-directory))))
     (_ (let ((default-directory (expand-file-name "sys/unix" source-directory)))
          (process-file-shell-command "./setup.sh hints/lisp")))))
@@ -533,7 +527,9 @@ Returns the buffer of the compilation process.
 Requires `make', `gcc', `bison' or `yacc', `flex' or `lex', and
 the ncurses-dev library for your system."
   ;; make fetch-lua && make install
-  (let* ((default-directory source-directory)
+  (let* ((default-directory (expand-file-name
+                             (if (eq system-type 'windows-nt) "src" "")
+                             source-directory))
          (compilation-cmd
           ;; Right now, since there are two make arguments passed here, the
           ;; comint mode sees this as two different compiles and gives messages
@@ -542,9 +538,10 @@ the ncurses-dev library for your system."
           ;; obscures the message that the build is done.  Still, it works for
           ;; now, so I'll just need to remember that it's currently a little
           ;; HACK-y.
-          (concat (when (string= nethack-version "3.7.0") "make fetch-lua && ")
+          (concat (when (string= nethack-version "3.7.0")
+		    (format "make fetch%slua && " (if (eq system-type 'windows-nt) "" "-")))
                   "make PREFIX=" nethack-build-directory
-                  (unless (eq window-system 'windows-nt) " all install")))
+                  (unless (eq system-type 'windows-nt) " all install")))
          (compilation-buffer
           (compilation-start compilation-cmd t))) ; Use compilation-shell-minor-mode
 
@@ -560,9 +557,7 @@ the ncurses-dev library for your system."
 
 ;;;###autoload
 (defun nethack-install (&optional no-query-p
-                          no-download-p
-                          no-error-p
-                          launch-nethack-p)
+                                  no-download-p)
   "Download, install, and patch nethack.
 If the `nethack-program' is not running or does not appear to be
 working, attempt to rebuild it.  If this build succeeded,
@@ -573,34 +568,18 @@ Build the program (if necessary) without asking first, if
 NO-QUERY-P is non-nil.  Also, if NO-QUERY-P is non-nil, then
 3.6.6 will be assumed to be the version to download and install.
 
-Do not download (but do untar) if NO-DOWNLOAD-P is non-nil.
-
-Do not signal an error in case the build failed, if NO-ERROR-P is
-non-nil.
-
-Call `nethack' upon a successful compilation if LAUNCH-NETHACK-P
-is non-nil."
+Do not download (but do untar) if NO-DOWNLOAD-P is non-nil."
   (interactive)
-  ;; (unless (nethack-installed-p)
-  (unless nil
+  (unless (nethack-installed-p)
     (if (or no-query-p
             (y-or-n-p "Need to (re)build the NetHack program, do it now?"))
         (progn
           (setq-default nethack-version
                         (or (and no-query-p "3.6.7")
                             (nethack-query-for-version)))
-          (when (and (eq window-system 'windows-nt) (not (string= nethack-version "3.7.0")))
+          (when (and (eq system-type 'windows-nt) (not (string= nethack-version "3.7.0")))
             (user-error "NetHack version %s is not supported on Windows" nethack-version))
-          (nethack-build
-           (lambda ()
-             (let ((msg (format "Building the NetHack program %s"
-                                (if (file-exists-p nethack-program)
-                                    "succeeded" "failed"))))
-               (if (not (file-exists-p nethack-program))
-                   (funcall (if no-error-p #'message #'error) "%s" msg)
-                 (message "%s" msg)
-                 (when launch-nethack-p (nethack)))))
-           no-download-p))
+          (nethack-build no-download-p))
       (message "NetHack not activated"))))
 
 
@@ -626,11 +605,11 @@ The variable `nethack-program' is the name of the executable to run."
         (when (get-buffer nethack-proc-buffer-name)
           (kill-buffer nethack-proc-buffer-name))
         (nethack-start (let ((process-environment (append (when nethack-wizmode `(,(concat "NETHACKOPTIONS=@" nethack-options-file))) nethack-environment process-environment))
-                             (default-directory (concat (when (and nethack-wizmode (not (eq system-type 'windows-nt))) "/sudo::" default-directory)))
+                             (default-directory (concat (when (and nethack-wizmode (not (eq system-type 'windows-nt))) "/sudo::") default-directory))
                              (nethack-program-args (append (when nethack-wizmode '("-D" "-u" "wizard")) nethack-program-args)))
                          (apply #'start-file-process "nh" nethack-proc-buffer-name
-                                nethack-program nethack-program-args)))))
-  (nethack-install))
+                                nethack-program nethack-program-args))))
+    (nethack-install)))
 
 ;;;###autoload
 (defun nethack-remote (connection-command &optional host port)

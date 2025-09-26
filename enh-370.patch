@@ -928,6 +928,32 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  /*
   * returns:
   *     1 if game should be recovered
+@@ -1243,6 +1251,7 @@
+ {
+     int c, ci, ct, pl, retval = 0;
+     boolean ismswin = WINDOWPORT(mswin),
++            islisp = WINDOWPORT(lisp),
+             iscurses = WINDOWPORT(curses);
+ 
+     pl = 1;
+@@ -1260,7 +1269,7 @@
+ 
+  other_ask_again:
+ 
+-    if (!ismswin && !iscurses) {
++    if (!ismswin && !iscurses && !islisp) {
+         while ((ci = nhgetch()) && !(ci == '\n' || ci == 13)) {
+             if (ct > 0) {
+                 /* invalid answer */
+@@ -1279,7 +1288,7 @@
+         c = y_n("Are you sure you wish to destroy the old game, rather than try to "
+                   "recover it? [yn] ");
+         pl = 2;
+-        if (!ismswin && !iscurses) {
++        if (!ismswin && !iscurses && !islisp) {
+             c = 'n';
+             ct = 0;
+             goto other_ask_again;
 --- NetHack-NetHack-3.7.0_WIP/sys/windows/windsys.c	2025-09-02 16:55:09.027193190 -0500
 +++ nethack/sys/windows/windsys.c	2025-09-02 20:02:32.960712885 -0500
 @@ -255,13 +255,15 @@
@@ -1562,7 +1588,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	s/nethack-api-updated-inventory/nethack-api-update-inventory/
 +	(WINLISP_VOID_RETVAL): added macro, called for every void
 +	function.
-
 --- /dev/null	2025-08-24 10:32:36.147906000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
 @@ -0,0 +1,1807 @@
