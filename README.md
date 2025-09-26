@@ -17,14 +17,15 @@ All of the Elisp is GPLv3-or-later, and the patches are under the modified 3-cla
 * Customizable colors
 * Macros
 * Event hooks
+* Record and playback sessions (ttyrec)
 * All the beauty that comes with Emacs
 
 ## Project Status
-I am semi-actively adding new features and fixing bugs as of August 2025.
-I mostly work on things that affect how I play NetHack (e.g. my `nethackrc`), so please open an issue/PR if something doesn't work—it's likely I just don't use that feature and never ran into that particular issue.
+I am semi-actively adding new features and fixing bugs as of September 2025.
+I mostly work on things that affect how I play NetHack (i.e. my `nethackrc`), so please open an issue/PR if something doesn't work—it's likely I just don't use that feature and never ran into that particular issue.
 
 > [!IMPORTANT]
-> nethack-el only supports versions 3.6.7 and 3.7.0-WIP of NetHack.
+> nethack-el only supports versions 3.6.7 and 3.7.0-WIP of vanilla NetHack.
 > Please do not open issues with using nethack-el with versions of NetHack older than 3.6.7.
 
 
@@ -32,13 +33,59 @@ Previous repo: <https://github.com/be11ng/nethack-el>
 
 Old website: <http://savannah.nongnu.org/projects/nethack-el>
 
-## Build and run
+## Usage
+The `nethack` command is all you need for local play; if a patched nethack executable can't be found, you will be prompted to build it (see [Building](Building)).
+
+### Remote NetHack
+Nethack-el can connect to a server running NetHack with `nethack-remote` (note that as of the time of writing no major public servers use the lisp patch 🥲).
+Running `nethack-remote` interactively provides a helpful completing read interface for the below scenarios and is the preferred way to launch a remote nethack game.
+
+To connect to NAO:
+```elisp
+(nethack-remote "ssh -o SetEnv=DGLAUTH=username:password nethack@%s" "nethack.alt.org")
+```
+(The above example also works for Hardfought.)
+
+Or over telnet:
+```elisp
+(nethack-remote "telnet -l username:password %s" "nethack.alt.org")
+```
+
+### Lisprec
+Nethack-el sessions can be recorded by enabling `nethack-lisprec-record`; when finished with a session a .lisprec.gz file will be saved to disk.
+
+lisprec(.gz) files can be played back in Emacs with the command `nethack-lisprec-playback`.
+Supported features are
+- Pause/resume (`C-c C-,`)
+- Variable rate fast forwarding (i.e. "10 minutes 30 seconds" to fast forward 10 minutes and 30 seconds)
+- Advance frame-by-frame
+
+If you would like to convert a lisprec into a more conventional ttyrec, try this script:
+```bash
+#!/usr/bin/env bash
+
+ttyrec -e "emacs -nw -L <nethack-el-dir> -l nethack --eval \"(progn (add-hook 'nethack-lisprec-playback-finished-hook #'kill-emacs) (nethack-lisprec-playback \\"$1\\"))\"" "${1%%.*}.ttyrec"
+```
+(If you don't care about preserving timings, I would recommend adding `(nethack-lisprec-fast-forward-until \`(,most-positive-fixnum 0 0 0))` to speed things up.)
+
+### Tiles
+If you're coming from the X11/Qt window port you may prefer playing with `(setq nethack-use-tiles "nethack")`, which draws the map with XPM images instead of text.
+
+You can use tiles with variants other than vanilla NetHack, too: for example, for Slash'EM, first you would run
+```bash
+# can also be run interactively
+emacs --batch -l nethack-el/nethack-gen-tiles.el --eval "(nethack-gen-tiles \"<slashem-src-dir>\")"
+```
+Next, ensure the resulting `slashem-tiles.el` is in your `load-path`, and then `(setq nethack-use-tiles "slashem")`.
+If you play many different variants, consider adding a function to `nethack-map-mode-hook` that sets `nethack-use-tiles` to the correct tileset.
+
+## Building
 
 These instructions are known to work on \*NIX systems and have been lightly tested on Windows.
 
 ### Easy installation
 
-* Install the Elisp sources
+* Install the Elisp sources (either from GitHub or MELPA)
 
   * Add the `nethack-el` folder to your Emacs load-path.
 
