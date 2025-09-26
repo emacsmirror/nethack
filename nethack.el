@@ -599,7 +599,7 @@ The variable `nethack-program' is the name of the executable to run."
       (if (nethack-is-running)
           (progn
             (message "NetHack process already running...")
-            (nethack-nhapi-restore-window-configuration))
+            (nethack-restore-windows))
         ;; Start the process.
         (nethack-kill-buffers)
         (when (get-buffer nethack-proc-buffer-name)
@@ -646,7 +646,7 @@ where \"nethack.alt.org\" could be substituted for \"hardfought.org\".
   (if (nethack-is-running)
       (progn
         (message "NetHack process already running...")
-        (nethack-nhapi-restore-window-configuration))
+        (nethack-restore-windows))
     (nethack-kill-buffers)
     (when (get-buffer nethack-proc-buffer-name)
       (kill-buffer nethack-proc-buffer-name))
@@ -743,6 +743,11 @@ delete the contents, perhaps logging the text."
   (while (and (member (process-status nethack-proc) '(open run))
               (not nethack-at-prompt))
     (accept-process-output nethack-proc)))
+(defun nethack-restore-windows ()
+  "Restore NetHack window layout."
+  (interactive)
+  (when nethack--window-configuration-before
+    (nethack-nhapi-restore-window-configuration)))
 
 ;;; Buffer code (aka windows in Nethack)
 (defvar nethack-map-mode-syntax-table

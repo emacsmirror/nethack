@@ -1,3 +1,9 @@
+2025-09-25  George Huebner  <george@feyor.sh>
+
+	* nethack.el (nethack-restore-windows): New interactive function
+	exposing `nethack-nhapi-restore-window-configuration` for easily
+	fixing disruptions to the window layout.
+
 2025-09-22  George Huebner  <george@feyor.sh>
 
 	* nethack.el (nethack-remote): New function for connecting to a
