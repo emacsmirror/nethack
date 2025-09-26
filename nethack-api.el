@@ -369,7 +369,7 @@ accessed 2021-04-23.")
   (setq x (- x 1))                      ; FIXME: put this hack in C
   (let ((inhibit-read-only t))
     (cond
-      ((or (nethack-options-set-p 'DECgraphics) (string-match-p "^DECgraphics$" (nethack-options-set-p 'symset)))
+      ((or (nethack-options-set-p 'DECgraphics) (string-match-p "^DECgraphics$" (or (nethack-options-set-p 'symset) "")))
        (nethack-gamegrid-set-cell
         x y
         ;; For DECgraphics, lower-case letters with high bit set mean switch
@@ -381,7 +381,7 @@ accessed 2021-04-23.")
           (or (cdr (assq (logxor ch #x80)
                          nethack-dec-graphics-char))
               ch))))
-      ((or (nethack-options-set-p 'IBMgraphics) (string-match-p "^IBMgraphics\\(?:_1\\|_2\\)?$" (nethack-options-set-p 'symset)))
+      ((or (nethack-options-set-p 'IBMgraphics) (string-match-p "^IBMgraphics\\(?:_1\\|_2\\)?$" (or (nethack-options-set-p 'symset) "")))
        (nethack-gamegrid-set-cell x y (decode-char 'cp437 ch)))
       (t (nethack-gamegrid-set-cell x y ch)))
     (set-text-properties (gamegrid-cell-offset x y)

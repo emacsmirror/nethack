@@ -618,8 +618,7 @@ non-nil.
 Call `nethack' upon a successful compilation if LAUNCH-NETHACK-P
 is non-nil."
   (interactive)
-  ;; (unless (nethack-installed-p)
-  (unless nil
+  (unless (nethack-installed-p)
     (if (or no-query-p
             (y-or-n-p "Need to (re)build the NetHack program, do it now?"))
         (progn
@@ -663,11 +662,11 @@ The variable `nethack-program' is the name of the executable to run."
         (when (get-buffer nethack-proc-buffer-name)
           (kill-buffer nethack-proc-buffer-name))
         (nethack-start (let ((process-environment (append (when nethack-wizmode `(,(concat "NETHACKOPTIONS=@" nethack-options-file))) nethack-environment process-environment))
-                             (default-directory (concat (when (and nethack-wizmode (not (eq system-type 'windows-nt))) "/sudo::" default-directory)))
+                             (default-directory (concat (when (and nethack-wizmode (not (eq system-type 'windows-nt))) "/sudo::") default-directory))
                              (nethack-program-args (append (when nethack-wizmode '("-D" "-u" "wizard")) nethack-program-args)))
                          (apply #'start-file-process "nh" nethack-proc-buffer-name
-                                nethack-program nethack-program-args)))))
-  (nethack-install))
+                                nethack-program nethack-program-args))))
+    (nethack-install)))
 
 ;;;###autoload
 (defun nethack-remote (connection-command &optional host port)
