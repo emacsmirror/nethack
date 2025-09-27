@@ -36,8 +36,8 @@ I am semi-actively adding new features and fixing bugs as of September 2025.
 I mostly work on things that affect how I play NetHack (i.e. my `nethackrc`), so please open an issue/PR if something doesn't work—it's likely I just don't use that feature and never ran into that particular issue.
 
 > [!IMPORTANT]
-> nethack-el currently only supports versions 3.6.7 and 3.7.0-WIP of vanilla NetHack.
-> Please do not open issues with using nethack-el with versions of NetHack older than 3.6.7.
+> nethack-el currently only officially supports versions 3.6.7 and 3.7.0-WIP of vanilla NetHack.
+> You are welcome to open issues when using nethack-el with modern versions of NetHack (including variants) but please do not open issues with versions of NetHack older than 3.6.7.
 
 
 Previous repo: <https://github.com/be11ng/nethack-el>
