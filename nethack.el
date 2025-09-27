@@ -106,6 +106,12 @@ Valid values are :map, :header-line, :mode-line, or t."
 
 ;;; Insert variables that control how the status gets displayed here.
 
+(defcustom nethack-use-tiles nil
+  "Name of XPM tileset to use when drawing the map and inventory."
+  :type '(string)
+  :options '("nethack" "slashem")
+  :group 'nethack)
+
 (defcustom nethack-map-mode-hook nil
   "Functions to be called after setting up the Nethack map."
   :type '(hook)
@@ -353,13 +359,6 @@ attribute, the new value, the old value, and the percent."
      (:foreground "black"))
     (t (:foreground "gray")))
   "Nethack white face."
-  :group 'nethack-faces)
-
-(defface nethack-map-tile-face
-  `((((type tty))
-     nil)
-    (t (:height 16)))
-  "Map face with height less than the tile size (16 pixels)."
   :group 'nethack-faces)
 
 
@@ -729,6 +728,12 @@ Assumes nethack is not already running."
     (set-process-filter nethack-proc #'nethack-filter)
     (set-process-sentinel nethack-proc #'nethack-sentinel)))
 
+(defun nethack-toggle-tiles ()
+  "Toggle the use of tiles on the map."
+  (interactive)
+  (setq nethack-use-tiles (not nethack-use-tiles))
+  (nethack-command-redraw-screen 2))
+
 ;;;; Process code to communicate with the Nethack executable
 (defconst nethack-prompt-regexp
   "^\\(command\\|menu\\|dummy\\|direction\\|number\\|string\\)> *")
@@ -878,7 +883,8 @@ delete the contents, perhaps logging the text."
   (setq-local scroll-conservatively 0)  ; recenter
   (setq-local scroll-margin 3)
   (setq-local cursor-in-non-selected-windows nil)
-  ;; TODO still need to figure out how to automatically scroll horizontally
+  (when (and nethack-use-tiles (display-graphic-p))
+    (face-remap-add-relative 'default :height 16))
   (run-hooks 'nethack-map-mode-hook))
 
 (define-derived-mode nethack-message-mode text-mode "NetHack Messages"
