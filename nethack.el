@@ -900,7 +900,8 @@ delete the contents, perhaps logging the text."
   (mapc (lambda (x) (when (buffer-live-p (cdr x))
                       (kill-buffer (cdr x))))
         nethack-menu-buffer-table)
-  (kill-buffer (get-buffer nethack-log-buffer)))
+  (when-let ((log-buf (get-buffer nethack-log-buffer)))
+    (kill-buffer log-buf)))
 
 
 (run-hooks 'nethack-load-hook)
