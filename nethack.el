@@ -789,14 +789,11 @@ delete the contents, perhaps logging the text."
 
 (defun nethack-kill-buffers ()
   "Kill all nethack associated buffers except the nethack process buffer."
-  (when (buffer-live-p nethack-map-buffer)
-    (kill-buffer nethack-map-buffer))        ; Preserve window for raw-print goodbye
-  (dolist (buffer (list nethack-status-buffer nethack-message-buffer))
-    (kill-buffer buffer))
+  (dolist (buf (list nethack-log-buffer nethack-map-buffer nethack-status-buffer nethack-message-buffer))
+    (when (and buf (buffer-live-p (get-buffer buf))) (kill-buffer buf)))
   (mapc (lambda (x) (when (buffer-live-p (cdr x))
                       (kill-buffer (cdr x))))
-        nethack-menu-buffer-table)
-  (kill-buffer (get-buffer nethack-log-buffer)))
+        nethack-menu-buffer-table))
 
 
 
