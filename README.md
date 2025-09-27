@@ -9,8 +9,6 @@ extensible, role-playing environment in the world!
 
 All of the Elisp is GPLv3-or-later, and the patches are under the modified 3-clause BSD.
 
-![](./images/screenshot.png)
-
 ## Features
 
 * Customizable keys
@@ -20,12 +18,25 @@ All of the Elisp is GPLv3-or-later, and the patches are under the modified 3-cla
 * Record and playback sessions (ttyrec)
 * All the beauty that comes with Emacs
 
+## Gallery
+
+![](./images/graphical-367.gif)
+*Nethack 3.6.7 in graphical Emacs with DECGraphics*
+
+<!-- generated with gif-screencast then `gifsicle --crop ... --scale ... --lossy 80 --colors 64 -O3 '#0-49'` -->
+![](./images/terminal-37.gif)
+*Nethack 3.7 in `emacs -nw` with IBMGraphics ([lisprec](Lisprec) playback)*
+
+<!-- generated with asciinema then `agg in.cast --font-family "JetBrainsMono Nerd Font Mono" out.gif` -->
+![](./images/tiles-37.gif)
+*Nethack 3.7 in graphical Emacs with `(setq nethack-use-tiles "nethack")`*
+
 ## Project Status
 I am semi-actively adding new features and fixing bugs as of September 2025.
 I mostly work on things that affect how I play NetHack (i.e. my `nethackrc`), so please open an issue/PR if something doesn't work—it's likely I just don't use that feature and never ran into that particular issue.
 
 > [!IMPORTANT]
-> nethack-el only supports versions 3.6.7 and 3.7.0-WIP of vanilla NetHack.
+> nethack-el currently only supports versions 3.6.7 and 3.7.0-WIP of vanilla NetHack.
 > Please do not open issues with using nethack-el with versions of NetHack older than 3.6.7.
 
 
