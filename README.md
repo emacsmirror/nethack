@@ -20,7 +20,7 @@ All of the Elisp is GPLv3-or-later, and the patches are under the modified 3-cla
 
 ## Gallery
 
-![](./images/graphical-367.gif)
+![](./images/graphical-367.png)
 *Nethack 3.6.7 in graphical Emacs with DECGraphics*
 
 <!-- generated with gif-screencast then `gifsicle --crop ... --scale ... --lossy 80 --colors 64 -O3 '#0-49'` -->
