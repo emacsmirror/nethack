@@ -884,7 +884,10 @@ delete the contents, perhaps logging the text."
   (setq-local scroll-margin 3)
   (setq-local cursor-in-non-selected-windows nil)
   (when (and nethack-use-tiles (display-graphic-p))
-    (face-remap-add-relative 'default :height 16))
+    (face-remap-add-relative 'default :height 16)
+    ;; for not clobbering our keybindings, and preventing the user
+    ;; from accidentally messing up the map tiles
+    (setq-local image-map (make-sparse-keymap)))
   (run-hooks 'nethack-map-mode-hook))
 
 (define-derived-mode nethack-message-mode text-mode "NetHack Messages"
