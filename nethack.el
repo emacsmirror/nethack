@@ -5,7 +5,7 @@
 ;; Author: Ryan Yeske <rcyeske@vcn.bc.ca>
 ;; Maintainer: George Huebner <george@feyor.sh>
 ;; Created: Sat Mar 18 11:31:52 2000
-;; Version: 0.14.2
+;; Version: 0.14.3
 ;; Keywords: games
 ;; URL: https://github.com/Feyorsh/nethack-el
 
@@ -48,7 +48,7 @@
   "Emacs Lisp frontend to the lisp window port of Nethack."
   :group 'games)
 
-(defconst nethack-el-version "0.14.2")
+(defconst nethack-el-version "0.14.3")
 (defconst nethack-el-earliest-compatible-version "0.13.0")
 (defun nethack-el-version ()
   "Print version of nethack-el."
