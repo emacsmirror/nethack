@@ -1051,10 +1051,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      return (win_request_info *) 0;
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,587 @@
+@@ -0,0 +1,589 @@
 +2025-10-11  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_display_file): Fix double free.
++	(lisp_init_nhwindows): Pass version as first argument to
++	`nethack-nhapi-init-nhwindows`.
 +
 +2025-09-26  George Huebner  <george@feyor.sh>
 +
@@ -1641,7 +1643,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	function.
 --- /dev/null	2025-08-24 10:32:36.147906000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
-@@ -0,0 +1,1806 @@
+@@ -0,0 +1,1808 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -3181,6 +3183,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +void
 +lisp_init_nhwindows(int *argcp, char **argv)
 +{
++  char verbuf[BUFSZ];
 +  char *need_options_file_p;
 +  int i;
 +
@@ -3209,6 +3212,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +
 +  /* Print each command-line option, constructing a list of strings */
 +  lisp_cmd ("init-nhwindows",
++	    lisp_string (getversionstring(verbuf, sizeof verbuf));
 +	    for (i=0; i<*argcp; i++)
 +	      lisp_string (argv[i]));
 +

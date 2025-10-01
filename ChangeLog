@@ -1,3 +1,11 @@
+2025-09-30  George Huebner  <george@feyor.sh>
+
+	* nethack-api.el (nethack-nhapi-init-nhwindows): Now requires a
+	version parameter and sets nethack-version accordingly
+	* nethack.el (nethack-build-patch): Now patches known issues
+	preventing compilation, and patches some absolute paths to system
+	utilities (useful if a system is not FHS compliant, like Nix).
+
 2025-09-27  George Huebner  <george@feyor.sh>
 
 	* nethack-api.el (nethack-nhapi-restore-window-configuration): Use
