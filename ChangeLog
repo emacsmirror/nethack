@@ -1,3 +1,8 @@
+2025-10-05  George Huebner  <george@feyor.sh>
+
+	* test/nethack-tests.el: Introduce ERT tests to check basic
+	functionality in CI.
+
 2025-09-30  George Huebner  <george@feyor.sh>
 
 	* nethack-api.el (nethack-nhapi-init-nhwindows): Now requires a
