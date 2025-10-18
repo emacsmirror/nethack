@@ -130,14 +130,6 @@ Valid values are :map, :header-line, :mode-line, or t."
   :type '(hook)
   :group 'nethack)
 
-(defcustom nethack-message-style t
-  "Decides where messages appear.
-:map means messages display in the map buffer.
-t means in a separate buffer."
-  :type '(symbol)
-  :options '(:map t)
-  :group 'nethack)
-
 (defcustom nethack-end-hook nil
   "Hook run when nethack has ended."
   :type '(hook)

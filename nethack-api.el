@@ -41,7 +41,6 @@
 (defvar nethack-status-header-line-format)
 (defvar nethack-status-mode-line-format)
 (defvar nethack-status-buffer-format)
-(defvar nethack-message-style)
 (defvar nethack-use-tiles)
 (defvar nethack-version)
 (defvar nethack-tile-vector)
@@ -535,20 +534,13 @@ Do not edit the value of this variable.  Instead, change the value of
   (setq nethack-inventory-need-update t))
 
 (defun nethack-nhapi-doprev-message ()
-  (cl-case nethack-message-style
-    (:map
-     (nethack-clear-message)
-     (nethack-message 'atr-none nethack-last-message))
-    (t
-     (save-selected-window
-       (save-current-buffer             ; is this redundant since we
-                                        ; already save the selected
-                                        ; window? -rcy
-         (walk-windows (lambda (w)
-                         (select-window w)
-                         (set-buffer (window-buffer))
-                         (when (eq (current-buffer) nethack-message-buffer)
-                           (scroll-down)))))))))
+  (save-selected-window
+    (save-current-buffer
+      (walk-windows (lambda (w)
+                      (select-window w)
+                      (set-buffer (window-buffer))
+                      (when (eq (current-buffer) nethack-message-buffer)
+                        (scroll-down)))))))
 
 (defun nethack-nhapi-update-positionbar (_features))
 
@@ -572,23 +564,15 @@ Do not edit the value of this variable.  Instead, change the value of
 
 (defun nethack-nhapi-create-message-window ()
   "Create the message buffer."
-  (cl-case nethack-message-style
-    (:map
-     ;; we need to create this buffer because messages come in before
-     ;; the map is set up.
-     (with-current-buffer (get-buffer-create "*nethack map*")
-       (let ((inhibit-read-only t))
-         (insert (make-string nethack-map-width 32) "\n"))))
-    (t
-     (with-current-buffer (get-buffer-create "*nethack message*")
-       (nethack-message-mode)
-       (let ((inhibit-read-only t))
-         (erase-buffer))
-       (setq nethack-message-highlight-overlay
-             (make-overlay (point-max) (point-max)))
-       (overlay-put nethack-message-highlight-overlay
-                    'face 'nethack-message-highlight-face)
-       (setq nethack-message-buffer (current-buffer))))))
+  (with-current-buffer (get-buffer-create "*nethack message*")
+    (nethack-message-mode)
+    (let ((inhibit-read-only t))
+      (erase-buffer))
+    (setq nethack-message-highlight-overlay
+          (make-overlay (point-max) (point-max)))
+    (overlay-put nethack-message-highlight-overlay
+                 'face 'nethack-message-highlight-face)
+    (setq nethack-message-buffer (current-buffer))))
 
 (defun nethack-nhapi-create-status-window ()
   "Create the status buffer."

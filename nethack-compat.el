@@ -41,7 +41,6 @@
 (defvar nethack-map-width)
 (defvar nethack-prompt-string)
 (defvar nethack-message-buffer)
-(defvar nethack-message-style)
 (defvar nethack-message-highlight-overlay)
 (declare-function nethack-nhapi-clear-message "nethack-api")
 
@@ -98,28 +97,24 @@ Return the modified alist."
         (unless dont-restore-point
           (goto-char old-pnt))))))
 
-(defun nethack-message (_attr str &optional block dont-restore-point)
-  (cl-case nethack-message-style
-    (:map
-     (nethack-display-message-in-map str block dont-restore-point))
-    (t
-     (with-current-buffer nethack-message-buffer
-       (goto-char (point-max))
-       (let ((inhibit-read-only t))
-         (run-hooks 'nethack-before-print-message-hook)
-         (insert str "\n"))
-       ;; cover new text with highlight overlay
-       (let ((start (overlay-start nethack-message-highlight-overlay)))
-         (move-overlay nethack-message-highlight-overlay
-                       start (point-max)))
-       ;; scroll to show maximum output on all windows displaying buffer
-       (let ((l (get-buffer-window-list (current-buffer))))
-         (save-selected-window
-           (mapc (lambda (w)
-                   (select-window w)
-                   (set-window-point w (- (point-max) 1))
-                   (recenter -1))
-                 l)))))))
+(defun nethack-message (_attr str &optional _block _dont-restore-point)
+  (with-current-buffer nethack-message-buffer
+    (goto-char (point-max))
+    (let ((inhibit-read-only t))
+      (run-hook-with-args 'nethack-before-print-message-hook str)
+      (insert str "\n"))
+    ;; cover new text with highlight overlay
+    (let ((start (overlay-start nethack-message-highlight-overlay)))
+      (move-overlay nethack-message-highlight-overlay
+                    start (point-max)))
+    ;; scroll to show maximum output on all windows displaying buffer
+    (let ((l (get-buffer-window-list (current-buffer))))
+      (save-selected-window
+        (mapc (lambda (w)
+                (select-window w)
+                (set-window-point w (- (point-max) 1))
+                (recenter -1))
+              l)))))
 
 (defun nethack-clear-map-message ()
   (with-current-buffer nethack-map-buffer
@@ -131,13 +126,9 @@ Return the modified alist."
        (insert (make-string nethack-map-width 32))))))
 
 (defun nethack-clear-message ()
-  (cl-case nethack-message-style
-    (:map
-     (nethack-clear-map-message))
-    (t
-     (with-current-buffer nethack-message-buffer
-       (move-overlay nethack-message-highlight-overlay
-                     (point-max) (point-max))))))
+  (with-current-buffer nethack-message-buffer
+    (move-overlay nethack-message-highlight-overlay
+                  (point-max) (point-max))))
 
 ;; XEmacs chars are not ints
 (defalias 'nethack-char-to-int (if (fboundp 'char-to-int)
