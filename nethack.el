@@ -810,13 +810,13 @@ PROC is the process object and MSG is the exit message."
     (when raw-print-buffer
       (switch-to-buffer raw-print-buffer))))
 
-(defvar nethack-log-process-text t)
 (defun nethack-log (string &optional print-timestamp)
-  (when nethack-log-process-text
-    (with-current-buffer (get-buffer-create nethack-log-buffer)
-      (goto-char (point-max))
-      (when print-timestamp
-        (insert (format "%s ; %s\n" (string-trim string) (time-subtract (current-time) nethack-start-time)))))))
+  (with-current-buffer (get-buffer-create nethack-log-buffer)
+    (goto-char (point-max))
+    (insert (string-trim string))
+    (when print-timestamp
+      (insert (format " ; %s" (time-subtract (current-time) nethack-start-time))))
+    (insert "\n")))
 
 (defvar nethack-at-prompt nil)
 (defvar nethack-at-prompt-hook nil
