@@ -1,3 +1,15 @@
+2025-10-18  George Huebner  <george@feyor.sh>
+
+	* nethack-api.el (nethack-menu-mode): Should behave like a proper
+
+	major mode now.
+	(nethack-nhapi-doprev-message): Remove support for
+	nethack-message-style.
+	(nethack-nhapi-create-message-window): Likewise.
+	* nethack-compat.el (nethack-message): Likewise.
+	(nethack-clear-message): Likewise.
+	* nethack.el (nethack-message-style): Likewise.
+
 2025-10-05  George Huebner  <george@feyor.sh>
 
 	* test/nethack-tests.el: Introduce ERT tests to check basic

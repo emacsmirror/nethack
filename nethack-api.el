@@ -694,11 +694,12 @@ The TYPE argument is legacy and serves no real purpose."
   "Major mode for Nethack menus.
 
 \\{nethack-menu-mode-map}"
-  (setq mode-name (string-join `("NetHack Menu" ,(when how (symbol-name how))) " "))
+  (kill-all-local-variables)
+  (setq mode-name (string-join `("NetHack Menu" ,@(when how (list (symbol-name how)))) " "))
   (setq major-mode #'nethack-menu-mode)
-  (use-local-map nethack-menu-mode-map)
   (setq nethack-menu-how how)
-  (run-hooks 'nethack-menu-mode-hook))
+  (use-local-map nethack-menu-mode-map)
+  (run-mode-hooks 'nethack-menu-mode-hook))
 
 (defun nethack-menu-toggle-item (&optional count)
   "Toggle the menu item that is associated with the key event that
