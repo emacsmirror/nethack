@@ -1,3 +1,14 @@
+2025-10-19  George Huebner  <george@feyor.sh>
+
+	* nethack-api.el (nethack-nhapi-yn-function): Add an optional
+	completing read interface for prompts asking for an inventory
+	item. Only candidates relevant to the current context are shown
+	(e.g. worn armor for #takeoff), but any inventory item is accepted
+	as valid input. More advanced contexts like invoking #eat as a
+	gelatinous cube are not currently implemented.
+	* nethack.el (nethack-want-completing-read): Add option to toggle
+	the above behaviour.
+
 2025-10-18  George Huebner  <george@feyor.sh>
 
 	* nethack-keys.el (nethack-menu-mode-map): Add keys for jumping to

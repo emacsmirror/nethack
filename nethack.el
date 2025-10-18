@@ -107,6 +107,11 @@ Valid values are :map, :header-line, :mode-line, or t."
   :type '(boolean)
   :group 'nethack)
 
+(defcustom nethack-want-completing-read t
+  "When non-nil, prefer using `completing-read' to get input."
+  :type '(boolean)
+  :group 'nethack)
+
 ;;; Insert variables that control how the status gets displayed here.
 
 (defcustom nethack-use-tiles nil

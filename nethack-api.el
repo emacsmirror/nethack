@@ -46,10 +46,12 @@
 (defvar nethack-tile-vector)
 (defvar nethack-proc)
 (defvar nethack-lisprec-record)
+(defvar nethack-want-completing-read)
 (declare-function nethack-map-mode "nethack")
 (declare-function nethack-status-mode "nethack")
 (declare-function nethack-message-mode "nethack")
 (declare-function nethack-send "nethack")
+(declare-function nethack-send-and-wait "nethack")
 
 
 ;;; Buffer handling
@@ -400,6 +402,79 @@ accessed 2021-04-23.")
                              glyph
                              ,glyph)))))
 
+
+(defun nethack-completing-read-filter (action)
+  (let* ((polymorph nil) ;; TODO
+         (all-categories '("Coins" "Weapons" "Armor" "Amulets" "Potions" "Scrolls" "Comestibles" "Spellbooks" "Rings" "Wands" "Tools" "Gems/Stones"))
+         (action-to-category-preds `(("drink" . (("Potions")))
+                                     ("adjust" . (,all-categories))
+                                     ("use or apply" . (,all-categories))
+                                     ("wear" . (("Armor") . ("being worn")))
+                                     ("take off" . (("Armor") . (t "being worn")))
+                                     ("drop" . (,all-categories . ("being worn")))
+                                     ("dip" . (,all-categories))
+                                     ("dip into" . (("Potions")))
+                                     ("eat" . (,@(pcase polymorph
+                                                  ('gelatinous-cube `(,all-categories))
+                                                  ('metalivore `(,all-categories))
+                                                  (_ '(("Comestibles"))))))
+                                     ("write with" . (("Coins" "Weapons" "Miscellaneous" "Wands" "Tools" "Gems/Stones")))
+                                     ("wield" . ((,@all-categories "Miscellaneous") . ("being worn" "wielded")))
+                                     ("read" . (("Scrolls" "Spellbooks")))
+                                     ("ready" . ((,all-categories) . ("being worn")))
+                                     ("throw" . (,all-categories . ("being worn")))
+                                     ("fire" . (,all-categories . ("being worn")))
+                                     ("put on" . (("Amulets" "Rings" "Armor") . ("being worn")))
+                                     ("remove" . (("Amulets" "Rings" "Armor") . (t "being worn")))))
+         (category-predicates (cdr (assoc-string action action-to-category-preds)))
+         (inventory (append (when (string= action "write with") '(("-" "your fingertip" . "Miscellaneous")))
+                            (when (string= action "wield") '(("-" "your bare hands" . "Miscellaneous")))
+                            nethack--inventory)))
+    (lambda (str _pred flag)
+      (pcase flag
+        ('metadata
+         (list 'metadata
+               (cons 'display-sort-function #'identity)
+               (cons 'annotation-function
+                     (lambda (cand)
+                       (format #("    %s" 4 6 (face font-lock-doc-face))
+                               (substring-no-properties (cadr (assoc-string cand inventory))))))
+               (cons 'group-function
+                     (lambda (cand transform)
+                       (if transform cand
+                         (cddr (assoc-string (substring-no-properties cand 0 1) inventory)))))))
+        ('t
+         (if (string-blank-p str)
+             (all-completions str (cl-remove-if-not
+                (lambda (i)
+                  (let* ((name (cadr i))
+                         (category (cddr i))
+                         ;; yes, if you name a weapon "(wielded)" or some dumb shit like that, this will break.
+                         (name-matcher (lambda (s) (string-match-p (format "(%s)$" (regexp-quote s)) name))))
+                    (and (member category (car category-predicates))
+                         (if (eq (cadr category-predicates) t) ;; invert match
+                             (cl-some name-matcher (cddr category-predicates))
+                           (not (cl-some name-matcher (cdr category-predicates)))))))
+                inventory))
+           (all-completions
+            str
+            (lambda (s _ _)
+              (mapcar
+               #'car
+               (cl-remove-if-not
+                (lambda (i)
+                  (let* ((name (cadr i))
+                         (category (cddr i))
+                         (name-matcher (lambda (s) (string-match-p (format "(%s)$" (regexp-quote s)) name))))
+                    (when (and (member category (car category-predicates))
+                         (if (eq (cadr category-predicates) t) ;; invert match
+                             (cl-some name-matcher (cddr category-predicates))
+                           (not (cl-some name-matcher (cdr category-predicates)))))
+                    (or
+                     (string-match-p (regexp-quote s) (car i))
+                     (string-match-p (regexp-quote s) (cadr i))))))
+                inventory))))))))))
+
 (defun nethack-nhapi-yn-function (ques choices default)
   (if nethack-proc
       (let (key)
@@ -410,21 +485,38 @@ accessed 2021-04-23.")
         (when (/= default 0)
           (setq choices (cons default choices)))
 
-        ;; Add some special keys of our own to the choices
-        (setq choices (cons 13 choices))
+        (if (and nethack-want-completing-read
+                 (string-match "\\(What do you want to \\(dip \\(.*\\) into\\|.*\\)\\? \\)\\[" ques))
+            (let* ((prompt (match-string 1 ques))
+                   (action (if (match-string 3 ques) "dip into" (match-string 2 ques)))
+                   (ret (condition-case _ (completing-read prompt (nethack-completing-read-filter action)) (quit "\0"))))
+              (while (not (or (assoc-string ret nethack--inventory) (string= ret "\0")))
+                (run-with-timer 0.01 nil (lambda () (minibuffer-message "match required")))
+                (setq ret (condition-case _ (completing-read prompt (nethack-completing-read-filter action)) (quit "\0"))))
+              (if (and (not (string= ret "\0")) (numberp current-prefix-arg) (> current-prefix-arg 0))
+                  (let* ((inhibit-quit nil)
+                         (nstr (number-to-string current-prefix-arg))
+                         (msd (substring nstr 0 1))
+                         (remaining-count (string-to-number (substring nstr 1))))
+                    (nethack-send-and-wait (string-to-char msd))
+                    (funcall (keymap-lookup nethack-map-mode-map ret) remaining-count))
+                (nethack-send (string-to-char ret))))
 
-        (setq key (nethack-read-char (concat ques " ")))
-        (when (> (length choices) 1)
-          (while (not (member key choices))
-            (setq key (nethack-read-char (concat
-                                          (format "(bad %d) " key)
-                                          ques " ")))))
-        ;; 13, 27, and 7 are abort keys
-        (nethack-send (if (or (= 13 key)
-                              (= 27 key)
-                              (= 7 key))
-                          default
-                        key)))
+          ;; Add some special keys of our own to the choices
+          (setq choices (cons 13 choices))
+
+          (setq key (nethack-read-char (concat ques " ")))
+          (when (> (length choices) 1)
+            (while (not (member key choices))
+              (setq key (nethack-read-char (concat
+                                            (format "(bad %d) " key)
+                                            ques " ")))))
+          ;; 13, 27, and 7 are abort keys
+          (nethack-send (if (or (= 13 key)
+                                (= 27 key)
+                                (= 7 key))
+                            default
+                          key))))
     (message ques)))
 
 (defun nethack-nhapi-ask-direction (prompt)
@@ -529,8 +621,10 @@ Do not edit the value of this variable.  Instead, change the value of
 
 (defvar nethack-inventory-need-update nil
   "If non-nil, at the next command prompt, update the menu.")
+(defvar nethack--inventory nil)
 
 (defun nethack-nhapi-update-inventory ()
+  (setq nethack--inventory nil)
   (setq nethack-inventory-need-update t))
 
 (defun nethack-nhapi-doprev-message ()
@@ -552,6 +646,7 @@ Do not edit the value of this variable.  Instead, change the value of
   (setq nethack-directory (file-name-directory executable))
   (when (and (nethack-options-set-p 'tiled_map) (null nethack-use-tiles))
     (message "You have OPTIONS=tiled_map set in your nethackrc; consider setting nethack-use-tiles"))
+  (setq nethack--inventory nil)
   ;; clean up old buffers
   (mapc (lambda (b) (kill-buffer (cdr b))) nethack-menu-buffer-table)
   (setq nethack-menu-buffer-table nil)
@@ -953,6 +1048,11 @@ buffer."
       (insert-char ?\n 1 nil)
       (when (nethack-options-set-p 'menucolors)
         (nethack-options-highlight-menu))
+      (when nethack-inventory-need-update
+        (if (= accelerator -1)
+            (push `(,str) nethack--inventory)
+          (let ((start (save-excursion (search-backward str))))
+            (push (cons (char-to-string accelerator) (buffer-substring start (+ start (length str)))) (cdar nethack--inventory)))))
       (run-hooks 'nethack-add-menu-hook))))
 
 ;; FIXME: xemacs propertize bug here
@@ -975,6 +1075,14 @@ the menu is dismissed."
     (if nethack-inventory-need-update
         (progn
           (setq nethack-inventory-need-update nil)
+          ;; transpose from '((CATEGORY (ACCEL . NAME))) to '((ACCEL NAME . CATEGORY))
+          (setq nethack--inventory
+                (reverse (mapcan
+                          (lambda (category)
+                            (mapcar (lambda (item)
+                                      `(,(car item) ,(cdr item) . ,(car category)))
+                                    (cdr category)))
+                          nethack--inventory)))
           (nethack-send nil))
       (progn
         (unless nethack-active-menu-buffer

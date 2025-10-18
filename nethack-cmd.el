@@ -34,7 +34,7 @@
 
 ;;; cmd.c is the cheat sheet for this file
 
-(defmacro defun-nethack-command (fun docstr cmdstr &rest body)
+(defmacro defun-nethack-command (fun docstr cmdstr &optional allow-count &rest body)
   "Like defun, but sends CMDSTR to nethack process before executing
 BODY."
   ;; Note: cmdstr is evaluated twice!
@@ -45,7 +45,7 @@ BODY."
           (when ,cmdstr
             (nethack-send-and-wait
              (concat ,cmdstr " "
-                     (if count
+                     (if (and count (or (not ,allow-count) (and ,allow-count (not (called-interactively-p 'interactive)))))
                          (number-to-string count)
                        "1"))))
        (progn ,@body))))
@@ -84,12 +84,12 @@ BODY."
 (defun-nethack-command apply "Apply (use) a tool" "apply")               ;a
 (defun-nethack-command remove-all-armor "Remove all armor" "remarm")     ;A
 (defun-nethack-command close-door "Close a door" "close")                ;c
-(defun-nethack-command drop "Drop an item" "drop")                       ;d
+(defun-nethack-command drop "Drop an item" "drop" t)                     ;d
 
 (defun-nethack-command drop-specific-item "Drop specific item types" "ddrop") ;D
 (defun-nethack-command eat "Eat something" "eat")                             ;e
 (defun-nethack-command engrave "Engrave writing on the floor" "engrave")      ;E
-(defun-nethack-command fire "Fire ammunition from quiver" "fire")             ;f
+(defun-nethack-command fire "Fire ammunition from quiver" "fire" t)           ;f
 (defun-nethack-command inventory "Show your inventory" "inv")                 ;i
 
 (defun-nethack-command type-inventory "Inventory specific item types" "typeinv") ;I
@@ -99,21 +99,22 @@ BODY."
 (defun-nethack-command put-on "Put on an accessory (ring, amulet, etc)" "puton") ;P
 
 (defun-nethack-command quaff "Quaff (drink) something" "drink") ;q
-(defun-nethack-command select-ammo-for-quiver "Select ammunition for quiver" "wieldquiver") ;Q
+(defun-nethack-command select-ammo-for-quiver "Select ammunition for quiver" "wieldquiver" t) ;Q
 (defun-nethack-command read "Read a scroll or spellbook" "read") ;r
 (defun-nethack-command remove-accessory "Remove an accessory (ring, amulet, etc)" "remring") ;R
 (defun-nethack-command search "Search for traps and secret doors" "search") ;s
 
 (defun-nethack-command save-game "Save the game" "save") ;S
-(defun-nethack-command throw "Throw something" "throw")  ;t
+(defun-nethack-command throw "Throw something" "throw" t) ;t
 (defun-nethack-command remove-single-armor "Take off one piece of armor" "takeoff") ;T
 (defun-nethack-command version          ;v
   "Show version"
   "simpleversion"
+  nil
   (nethack-nhapi-message nil (nethack-el-version)))
 (defun-nethack-command version-and-history "Show long version and game history" "history") ;V
 
-(defun-nethack-command wield "Wield (put in use) a weapon" "wield") ;w
+(defun-nethack-command wield "Wield (put in use) a weapon" "wield" t) ;w
 (defun-nethack-command wear-armor "Wear a piece of armor" "wear")   ;W
 (defun-nethack-command swap-weapons "Swap wielded and secondary weapons" "swapweapon") ;x
 (defun-nethack-command explore-mode "Enter explore (discovery) mode (only if defined)" "enter_explore_mode") ;X
@@ -185,7 +186,7 @@ BODY."
 (defun-nethack-command read-extended "perform an extended command." "#")
 
 (defun-nethack-command pray "pray to the gods for help." "pray")
-(defun-nethack-command adjust "adjust inventory letters." "adjust")
+(defun-nethack-command adjust "adjust inventory letters." "adjust" t)
 (defun-nethack-command chat "talk to someone." "chat")
 (defun-nethack-command conduct "list which challenges you have adhered to." "conduct")
 (defun-nethack-command dip "dip an object into something." "dip")
@@ -218,6 +219,7 @@ BODY."
 (defun-nethack-command previous-message  ; ^P
   "Scroll through previously displayed game messages"
   nil ;;"doprev" FIXME: is not implemented in C
+  nil
   (nethack-nhapi-doprev-message))
 
 (defun-nethack-command redraw-screen  ; ^R
@@ -226,6 +228,7 @@ BODY."
 With a prefix arg, also redraws the map glyphs."
   ;; only send process a redraw if there is a prefix arg
   (and (> count 1) "redraw")
+  nil
   ;; but always restore the window configuration
   (nethack-nhapi-restore-window-configuration))
 
