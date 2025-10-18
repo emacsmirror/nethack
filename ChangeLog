@@ -1,5 +1,14 @@
 2025-10-18  George Huebner  <george@feyor.sh>
 
+	* nethack-keys.el (nethack-menu-mode-map): Add keys for jumping to
+	top and bottom of a menu, selecting/deselecting/inverting the
+	selection of the (visible portion of) a menu, inverting the
+	selection of different categories of inventory items, and toggling
+	items that match a regexp.
+	* nethack-api.el: Add functions to implement the above.
+
+2025-10-18  George Huebner  <george@feyor.sh>
+
 	* nethack-api.el (nethack-menu-mode): Should behave like a proper
 
 	major mode now.

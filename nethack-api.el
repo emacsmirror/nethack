@@ -721,18 +721,139 @@ was actually toggled."
         (message "No such menu option: %c" last-command-event)
         (goto-char old-point)))))
 
-(defun nethack-menu-toggle-all-items ()
-  "Toggle all menu items, only for pick-any menus."
+(defun nethack-menu-toggle-items (&optional behavior page-only)
+  "Toggle items in a pick-any menu buffer.
+
+Items are inverted by default, and selected/deselected if behavior is
+`select'/`deselect'.
+
+Set page-only to t to only toggle visible menu items."
   (interactive)
+  (when (eq nethack-menu-how 'pick-any)
+    (save-excursion
+      (let ((inhibit-read-only t))
+        (goto-char (if page-only (window-start) (point-min)))
+        (while (re-search-forward nethack-menu-item-regexp (when page-only (window-end)) t)
+          (let ((value (match-string 2)))
+            (if (and (or (string-equal value "-")
+                         (eq behavior 'select))
+                     (not (eq behavior 'deselect)))
+                (replace-match "+" nil nil nil 2)
+              (replace-match "-" nil nil nil 2))))))))
+
+(defun nethack-menu-select-page ()
+  "Select all visible menu items."
+  (interactive)
+  (nethack-menu-toggle-items 'select t))
+
+(defun nethack-menu-select-all ()
+  "Select all menu items."
+  (interactive)
+  (nethack-menu-toggle-items 'select))
+
+(defun nethack-menu-deselect-page ()
+  "Deselect all visible menu items."
+  (interactive)
+  (nethack-menu-toggle-items 'deselect t))
+
+(defun nethack-menu-deselect-all ()
+  "Deselect all menu items."
+  (interactive)
+  (nethack-menu-toggle-items 'deselect))
+
+(defun nethack-menu-invert-page ()
+  "Invert selection of all visible menu items."
+  (interactive)
+  (nethack-menu-toggle-items nil t))
+
+(defun nethack-menu-invert-all ()
+  "Invert selection of all menu items."
+  (interactive)
+  (nethack-menu-toggle-items))
+
+(defun nethack-menu-toggle-category (category)
+  "Toggle all items under CATEGORY in a pick-any menu buffer.
+
+If CATEGORY cannot be found, fallback to `nethack-menu-toggle-item'."
+  (when (catch 'fallback
+          (save-excursion
+            (let ((inhibit-read-only t))
+              (goto-char (point-min))
+              (unless (and (eq nethack-menu-how 'pick-any)
+                           (re-search-forward (format "^%s$" category) nil t))
+                (throw 'fallback t))
+              (beginning-of-line 2)
+              (while (looking-at nethack-menu-item-regexp)
+                (let ((value (match-string 2)))
+                  (if (string-equal value "-")
+                      (replace-match "+" nil nil nil 2)
+                    (replace-match "-" nil nil nil 2)))
+                (beginning-of-line 2)))))
+    (nethack-menu-toggle-item)))
+
+;; kinda useless as only menu item in coins already has accelerator $
+(defun nethack-menu-toggle-coins ()
+  (interactive)
+  (nethack-menu-toggle-category "Coins"))
+
+(defun nethack-menu-toggle-weapons ()
+  (interactive)
+  (nethack-menu-toggle-category "Weapons"))
+
+(defun nethack-menu-toggle-armor ()
+  (interactive)
+  (nethack-menu-toggle-category "Armor"))
+
+(defun nethack-menu-toggle-amulets ()
+  (interactive)
+  (nethack-menu-toggle-category "Amulets"))
+
+(defun nethack-menu-toggle-scrolls ()
+  (interactive)
+  (nethack-menu-toggle-category "Scrolls"))
+
+(defun nethack-menu-toggle-potions ()
+  (interactive)
+  (nethack-menu-toggle-category "Potions"))
+
+(defun nethack-menu-toggle-comestibles ()
+  (interactive)
+  (nethack-menu-toggle-category "Comestibles"))
+
+(defun nethack-menu-toggle-spellbooks ()
+  (interactive)
+  (nethack-menu-toggle-category "Spellbooks"))
+
+(defun nethack-menu-toggle-rings ()
+  (interactive)
+  (nethack-menu-toggle-category "Rings"))
+
+(defun nethack-menu-toggle-wands ()
+  (interactive)
+  (nethack-menu-toggle-category "Wands"))
+
+(defun nethack-menu-toggle-tools ()
+  (interactive)
+  (nethack-menu-toggle-category "Tools"))
+
+(defun nethack-menu-toggle-gems ()
+  (interactive)
+  (nethack-menu-toggle-category "Gems/Stones"))
+
+(defun nethack-menu-search-toggle (regexp)
+  "Toggle all menu items matching REGEXP."
+  (interactive "MSearch for: ")
   (when (eq nethack-menu-how 'pick-any)
     (save-excursion
       (let ((inhibit-read-only t))
         (goto-char (point-min))
         (while (re-search-forward nethack-menu-item-regexp nil t)
-          (let ((value (match-string 2)))
-            (if (string-equal value "-")
-                (replace-match "+" nil nil nil 2)
-              (replace-match "-" nil nil nil 2))))))))
+          (let ((item (match-string 3))
+                (value (match-string 2)))
+            (when (string-match-p regexp item)
+              (if (string-equal value "-")
+                  (replace-match "+" nil nil nil 2)
+                (replace-match "-" nil nil nil 2)))))))))
 
 (defun nethack-menu-goto-next ()
   "Move to the next selectable menu item."
