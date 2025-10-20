@@ -369,6 +369,8 @@ Values taken from
 http://fileformats.archiveteam.org/wiki/DEC_Special_Graphics_Character_Set,
 accessed 2021-04-23.")
 
+;; set to nil to disable the check
+(defvar nethack-nhapi-print-glyph--previous-ch t)
 (defun nethack-nhapi-print-glyph (x y color glyph tile ch &optional attr)
   "Insert glyph into `nethack-map-buffer'."
   (set-buffer nethack-map-buffer)
@@ -394,7 +396,21 @@ accessed 2021-04-23.")
                 ch))))
         ((or (nethack-options-set-p 'IBMgraphics) (string-match-p "^IBMgraphics\\(?:_1\\|_2\\)?$" (or (nethack-options-set-p 'symset) "")))
          (nethack-gamegrid-set-cell x y (decode-char 'cp437 ch)))
-        (t (nethack-gamegrid-set-cell x y ch)))
+        (t
+         ;; try to infer symset by checking the character used for the horizontal wall.
+         (when nethack-nhapi-print-glyph--previous-ch
+           (if (eq nethack-nhapi-print-glyph--previous-ch ch)
+               (when-let ((symset (pcase ch
+                                    (241 "DECgraphics")
+                                    (196 "IBMgraphics")
+                                    (?- (setq nethack-nhapi-print-glyph--previous-ch nil))
+                                    (_ nil))))
+                 (setq nethack-nhapi-print-glyph--previous-ch nil)
+                 (push `("symset" ,symset) nethack-options)
+                 (warn "Inferred symset to be %s, please put OPTIONS=symset:%1$s in your .nethackrc" symset))
+             (setq nethack-nhapi-print-glyph--previous-ch ch)))
+
+         (nethack-gamegrid-set-cell x y ch)))
       (set-text-properties (gamegrid-cell-offset x y)
                            (1+ (gamegrid-cell-offset x y))
                            `(face
@@ -646,6 +662,7 @@ Do not edit the value of this variable.  Instead, change the value of
   (setq nethack-directory (file-name-directory executable))
   (when (and (nethack-options-set-p 'tiled_map) (null nethack-use-tiles))
     (message "You have OPTIONS=tiled_map set in your nethackrc; consider setting nethack-use-tiles"))
+  (setq nethack-nhapi-print-glyph--previous-ch t)
   (setq nethack--inventory nil)
   ;; clean up old buffers
   (mapc (lambda (b) (kill-buffer (cdr b))) nethack-menu-buffer-table)

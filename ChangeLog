@@ -1,5 +1,11 @@
 2025-10-19  George Huebner  <george@feyor.sh>
 
+	* nethack-api.el (nethack-nhapi-print-glyph): If no symset is set
+	at the beginning of a game, this function will make an educated
+	guess based on the output it receives from nethack.
+
+2025-10-19  George Huebner  <george@feyor.sh>
+
 	* nethack-api.el (nethack-nhapi-yn-function): Add an optional
 	completing read interface for prompts asking for an inventory
 	item. Only candidates relevant to the current context are shown
