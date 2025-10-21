@@ -1248,6 +1248,7 @@ the menu is dismissed."
   (setq nethack-options-mon-polycontrol mon-polycontrol))
 
 (defun nethack-nhapi-need-options-file ()
+  (setq nethack-options nil)
   (if (and (file-exists-p nethack-options-file)
            (not nethack-lisprec-record)
            ;; remote nethack sessions use the shell, so the command is longer

@@ -1643,7 +1643,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	function.
 --- /dev/null	2025-08-24 10:32:36.147906000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
-@@ -0,0 +1,1808 @@
+@@ -0,0 +1,1818 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -2505,7 +2505,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +{
 +  char *line;
 +  lisp_cmd ("askname",);
-+  read_string ("string", &line);
++  for (int i = 0; i < 10; i++)
++      if (read_string("string", &line) != -1)
++          goto done;
++  bail("Giving up after 10 tries.\n");
++done:
 +  strncpy (svp.plname, line, PL_NSIZ);
 +  svp.plname[PL_NSIZ-1] = '\0';
 +  free (line);
@@ -2757,10 +2761,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +
 +redo:
 +  lisp_cmd ("select-menu",
-+	    lisp_int (window);
-+	    lisp_literal (how_to_string (how)));
++     lisp_int (window);
++     lisp_literal (how_to_string (how)));
++  if (read_string("menu", &list) == -1)
++      return size;
 +
-+  read_string ("menu", &list);
 +
 +  /* The client should submit a structure like this:
 +
@@ -2879,13 +2884,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +
 +      while (!nh_cmd)
 +        {
-+          read_command ("command", cmdstr, count_buf);
++          if (read_command("command", cmdstr, count_buf) == -1)
++              return '\033';
 +
 +          count_pos = count_buf;
 +          cmd = lisp_get_cmd (cmdstr);
 +          if (cmd == -1)
 +            {
-+              printf ("(nethack-nhapi-message 'atr-none \"undefined-command %s\")\n", cmdstr);
++              printf ("(nethack-nhapi-message 'nethack-atr-none-face \"undefined-command %s\")\n", cmdstr);
 +            }
 +          else if (cmd_index[cmd].type == CMD_LISP)
 +            {
@@ -3086,8 +3092,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +  if (window != WIN_MESSAGE && window != WIN_STATUS && window != WIN_MAP)
 +    {
 +      lisp_cmd ("display-menu", lisp_int (window));
-+      read_string ("dummy", &dummy);
-+      free (dummy);
++      if (read_string ("dummy", &dummy) != -1)
++          free (dummy);
 +    }
 +  else if (blocking)
 +    {
@@ -3098,8 +3104,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +      else
 +	{
 +	  lisp_cmd ("block",);
-+	  read_string ("dummy", &dummy);
-+	  free (dummy);
++	  if (read_string ("dummy", &dummy) != -1)
++	      free (dummy);
 +	}
 +    }
 +  else if (window == WIN_STATUS)
@@ -3197,16 +3203,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +      if (fp == NULL) {
 +          Sprintf(buf, "cannot open options file %s", get_configfile());
 +          lisp_cmd ("receive-file", lisp_string(buf); lisp_string("error"););;
-+          return;
-+      }
++      } else {
++          while (fgets(buf, BUFSZ, fp) != NULL) {
++              lisp_cmd ("receive-file", lisp_string (buf););;
++          }
 +
-+      while (fgets(buf, BUFSZ, fp) != NULL) {
-+          lisp_cmd ("receive-file", lisp_string (buf););;
++          fclose(fp);
++          lisp_cmd ("receive-file", lisp_string (""); lisp_t;);;
++          free(need_options_file_p);
 +      }
-+
-+      fclose(fp);
-+      lisp_cmd ("receive-file", lisp_string (""); lisp_t;);;
-+      free(need_options_file_p);
 +  }
 +
 +
@@ -3244,8 +3249,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +{
 +  char *dummy;
 +  lisp_cmd ("delay-output",);
-+  read_string ("dummy", &dummy);
-+  free (dummy);
++  if (read_string ("dummy", &dummy) != -1)
++      free (dummy);
 +}
 +
 +void
@@ -3253,9 +3258,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +{
 +  char *tmp;
 +  lisp_cmd ("getlin", lisp_string (question));
-+  read_string ("string", &tmp);
-+  /* FIXME: potential buffer overflow. */
-+  strcpy (input, tmp);
++  if (read_string("string", &tmp) == -1) {
++      strcpy(input, "\033");
++  } else {
++      strncpy(input, tmp, BUFSZ-1);
++      free(tmp);
++  }
 +}
 +
 +int
@@ -3327,8 +3335,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +    {
 +      char *dir;
 +      lisp_cmd ("ask-direction",
-+		lisp_string (ques));
-+      read_string ("direction", &dir);
++   	    lisp_string (ques));
++      if (read_string("direction", &dir) == -1)
++          return '\033';
 +      if (!strcmp (dir, "n"))
 +	answer = 'k';
 +      else if (!strcmp (dir, "s"))
@@ -3368,6 +3377,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +		lisp_string (choices);
 +		lisp_int (def));
 +      read_int ("number", &answer);
++      answer = (answer == -1) ? '\033' : answer;
 +    }
 +
 +  return (char)answer;
