@@ -47,6 +47,7 @@
 (defvar nethack-proc)
 (defvar nethack-lisprec-record)
 (defvar nethack-want-completing-read)
+(defvar nethack-tiles-scale)
 (declare-function nethack-map-mode "nethack")
 (declare-function nethack-status-mode "nethack")
 (declare-function nethack-message-mode "nethack")
@@ -378,10 +379,12 @@ accessed 2021-04-23.")
   (let ((inhibit-read-only t))
     (if (and nethack-use-tiles (display-images-p))
         (save-excursion
-          (let ((buffer-read-only nil))
+          (let ((buffer-read-only nil)
+                (image (elt nethack-tile-vector tile)))
             (goto-char (gamegrid-cell-offset x y))
             (delete-char 1)
-            (insert-image (elt nethack-tile-vector tile))))
+            (image--set-property image :scale nethack-tiles-scale)
+            (insert-image image)))
       (cond
         ((or (nethack-options-set-p 'DECgraphics) (string-match-p "^DECgraphics$" (or (nethack-options-set-p 'symset) "")))
          (nethack-gamegrid-set-cell

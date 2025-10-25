@@ -26,6 +26,9 @@
 
 ;;; Code:
 
+(declare-function nethack-text-scale-increase "nethack")
+(declare-function nethack-text-scale-decrease "nethack")
+
 (defvar nethack-accelerator-chars
   [?a ?b ?c ?d ?e ?f ?g ?h ?i ?j ?k ?l ?m ?n ?o ?p ?q ?r ?s ?t ?u ?v
       ?w ?x ?y ?z ?A ?B ?C ?D ?E ?F ?G ?H ?I ?J ?K ?L ?M ?N ?O ?P ?Q ?R ?S
@@ -98,6 +101,11 @@
 (defvar nethack-map-mode-map
   (let ((map (make-sparse-keymap)))
     (suppress-keymap map)
+    (define-key map "\M-=" #'nethack-text-scale-increase)
+    (define-key map [magnify-up] #'nethack-text-scale-increase)
+    (define-key map "\M--" #'nethack-text-scale-decrease)
+    (define-key map [magnify-down] #'nethack-text-scale-decrease)
+
     (define-key map "_" #'nethack-command-travel)        ;_
     (define-key map "^" #'nethack-command-identify-trap) ;^
 

@@ -744,6 +744,35 @@ Assumes nethack is not already running."
     (with-current-buffer nethack-map-buffer (nethack-map-mode)))
   (nethack-command-redraw-screen 2))
 
+(defvar nethack-tiles-scale nil)
+(defun nethack-rescale-tiles ()
+  (save-excursion
+    (with-current-buffer nethack-map-buffer
+      (goto-char (point-min))
+      (while (not (eobp))
+        (when-let ((image (get-text-property (point) 'display)))
+          (image--set-property image :scale nethack-tiles-scale))
+        (goto-char (next-single-char-property-change (point) 'display))))
+    (clear-image-cache)))
+
+(defun nethack-text-scale-increase (inc)
+  (interactive "p")
+  (unless (derived-mode-p 'nethack-map-mode)
+    (error "Not in NetHack map mode"))
+  (if (eq (next-single-char-property-change (point-min) 'display) (point-max))
+      (text-scale-increase inc)
+    (setq nethack-tiles-scale (min 8.0 (ffloor (+ nethack-tiles-scale inc))))
+    (nethack-rescale-tiles)))
+
+(defun nethack-text-scale-decrease (dec)
+  (interactive "p")
+  (unless (derived-mode-p 'nethack-map-mode)
+    (error "Not in NetHack map mode"))
+  (if (eq (next-single-char-property-change (point-min) 'display) (point-max))
+      (text-scale-decrease dec)
+    (setq nethack-tiles-scale (max 0.5 (- nethack-tiles-scale dec)))
+    (nethack-rescale-tiles)))
+
 ;;;; Process code to communicate with the Nethack executable
 (defconst nethack-prompt-regexp
   "^\\(command\\|menu\\|dummy\\|direction\\|number\\|string\\)> *")
@@ -895,7 +924,7 @@ delete the contents, perhaps logging the text."
   (setq-local scroll-margin 3)
   (setq-local cursor-in-non-selected-windows nil)
   (when (and nethack-use-tiles (display-graphic-p))
-    (let ((cookie (face-remap-add-relative 'default :height 16)))
+    (let ((cookie (face-remap-add-relative 'default :height 8)))
       (setq nethack-use-tiles--font-height (or nethack-use-tiles--font-height cookie)))
     ;; for not clobbering our keybindings, and preventing the user
     ;; from accidentally messing up the map tiles

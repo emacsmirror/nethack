@@ -1,3 +1,12 @@
+2025-10-24  George Huebner  <george@feyor.sh>
+
+	* nethack.el (nethack-text-scale-increase): Introduce wrapper
+	around `text-scale-increase` that will scale both text and tiles
+	correctly.
+	(nethack-text-scale-decrease): Likewise.
+	* nethack-api.el (nethack-nhapi-print-glyph): Take scaling into
+	account when inserting images.
+
 2025-10-19  George Huebner  <george@feyor.sh>
 
 	* nethack-api.el (nethack-nhapi-print-glyph): If no symset is set
