@@ -642,9 +642,7 @@ Do not edit the value of this variable.  Instead, change the value of
   "If non-nil, at the next command prompt, update the menu.")
 (defvar nethack--inventory nil)
 
-(defun nethack-nhapi-update-inventory ()
-  (setq nethack--inventory nil)
-  (setq nethack-inventory-need-update t))
+(defun nethack-nhapi-update-inventory ())
 
 (defun nethack-nhapi-doprev-message ()
   (save-selected-window
@@ -665,6 +663,8 @@ Do not edit the value of this variable.  Instead, change the value of
   (setq nethack-directory (file-name-directory executable))
   (when (and (nethack-options-set-p 'tiled_map) (null nethack-use-tiles))
     (message "You have OPTIONS=tiled_map set in your nethackrc; consider setting nethack-use-tiles"))
+  (when (and nethack-want-completing-read (not (nethack-options-set-p 'perm_invent)))
+    (message "nethack-want-completing-read does not function properly without OPTIONS=perm_invent"))
   (setq nethack-nhapi-print-glyph--previous-ch t)
   (setq nethack--inventory nil)
   ;; clean up old buffers
@@ -1031,6 +1031,9 @@ displayed."
 accelerator that will be used in unassigned menus.")
 
 (defun nethack-nhapi-start-menu (menuid)
+  (when (= menuid 4)
+    (setq nethack--inventory nil)
+    (setq nethack-inventory-need-update t))
   (with-current-buffer (nethack-menu-buffer menuid)
     (let ((inhibit-read-only t))
       (erase-buffer)
