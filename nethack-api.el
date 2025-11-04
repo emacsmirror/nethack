@@ -565,7 +565,7 @@ accessed 2021-04-23.")
       (nethack-send (nethack-read-line "Who are you? "))
     (message "Who are you? ")))
 
-(defun nethack-nhapi-getlin (ques)
+(defun nethack-nhapi-getlin (ques &optional initial)
   (if nethack-proc
       (nethack-send (condition-case nil
                         (nethack-read-line (concat ques " "))

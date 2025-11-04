@@ -67,8 +67,8 @@ Return the modified alist."
   (with-current-buffer (window-buffer window)
     (count-lines (point-min) (point-max))))
 
-(defun nethack-read-line (prompt)
-  (read-from-minibuffer prompt))
+(defun nethack-read-line (prompt &optional initial-contents)
+  (read-from-minibuffer prompt initial-contents))
 
 (defvar nethack-last-message nil
   "Contains the last message displayed by `nethack-message'.")
