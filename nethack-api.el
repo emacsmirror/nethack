@@ -1072,10 +1072,12 @@ buffer."
       (when (nethack-options-set-p 'menucolors)
         (nethack-options-highlight-menu))
       (when nethack-inventory-need-update
-        (if (= accelerator -1)
-            (push `(,str) nethack--inventory)
-          (let ((start (save-excursion (search-backward str))))
-            (push (cons (char-to-string accelerator) (buffer-substring start (+ start (length str)))) (cdar nethack--inventory)))))
+        (condition-case nil
+            (if (= accelerator -1)
+                (push `(,str) nethack--inventory)
+              (let ((start (save-excursion (search-backward str))))
+                (push (cons (char-to-string accelerator) (buffer-substring start (+ start (length str)))) (cdar nethack--inventory))))
+          (error (setq nethack-inventory-need-update nil))))
       (run-hooks 'nethack-add-menu-hook))))
 
 ;; FIXME: xemacs propertize bug here
@@ -1095,7 +1097,7 @@ Saves the current window configuration so that it can be restored when
 the menu is dismissed."
   (let ((buffer (nethack-menu-buffer menuid)))
     (unless buffer (error "No such menuid: %d" menuid))
-    (if nethack-inventory-need-update
+    (when nethack-inventory-need-update
         (progn
           (setq nethack-inventory-need-update nil)
           ;; transpose from '((CATEGORY (ACCEL . NAME))) to '((ACCEL NAME . CATEGORY))
@@ -1106,7 +1108,7 @@ the menu is dismissed."
                                       `(,(car item) ,(cdr item) . ,(car category)))
                                     (cdr category)))
                           nethack--inventory)))
-          (nethack-send nil))
+          (nethack-send nil)))
       (progn
         (unless nethack-active-menu-buffer
           (setq nethack-window-configuration (current-window-configuration)))
@@ -1129,7 +1131,7 @@ the menu is dismissed."
         (nethack-menu-mode how)
         (goto-char (point-min))
         (message "Displaying menu")
-        (setq nethack-active-menu-buffer buffer)))))
+        (setq nethack-active-menu-buffer buffer))))
 
 (defmacro nethack-nhapi--let*-if (condition then-bindings else-bindings &rest body)
   `(if ,condition
