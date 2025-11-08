@@ -1,4 +1,4 @@
-;;; nethack-interhack.el --- port of various interhack plugins to enhance play -*- lexical-binding:t -*-
+;;; nethack-interhack.el --- Plugins to enhance the nethack-el interface -*- lexical-binding:t -*-
 
 ;; Copyright (C) 2025 George Huebner
 
@@ -52,18 +52,22 @@
   (with-current-buffer nethack-message-buffer
     (save-excursion
       (goto-char (if from-top (point-min) (point-max)))
-      (funcall (if from-top #'search-forward-regexp #'search-backward-regexp)
-               regexp bound t)
-      (let (ret)
-        (cl-loop
-              for (start end)
-              on (match-data)
-              by #'cddr
-              do (when (and start end) (push (buffer-substring-no-properties start end) ret)))
-        (reverse ret)))))
+      (when (funcall (if from-top #'search-forward-regexp #'search-backward-regexp) regexp bound t)
+        (let (ret)
+          (cl-loop
+                for (start end)
+                on (match-data)
+                by #'cddr
+                do (when (and start end) (push (buffer-substring-no-properties start end) ret)))
+          (reverse ret))))))
+
+(defun nethack-interhack--get-role-race ()
+  (cdr (or (nethack-interhack--search-messages "the \\([^ ]+\\) \\([^ ]+\\), welcome back to NetHack!$" 100 t)
+           (nethack-interhack--search-messages "^Hello .*, welcome to NetHack!  You are a [^ ]+ [^ ]+ \\([^ ]+\\) \\([^ ]+\\)\\.$" 1000 t))))
 
 (defun nethack-interhack--hint-message (format-string &rest args)
   (message "%s" (propertize (apply #'format format-string args) 'face 'nethack-interhack-hint-face)))
+
 
 
 (defun nethack-interhack-floating-eye ()
@@ -71,10 +75,102 @@
   (interactive)
   (nethack-interhack--toggle-advice
    nethack-nhapi-print-glyph "floating-eye"
-   :filter-args (_x _y _color _glyph _tile ch &optional attr)
+   :filter-args (x y color glyph tile ch &optional attr)
    (when (and (= ch ?e) (eq attr 'nethack-blue-face))
      (setq attr 'nethack-interhack-floating-eye-face))
-   (list _x _y _color _glyph _tile ch attr)))
+   (list x y color glyph tile ch attr)))
+
+
+(defun nethack-interhack--mastermind-hash (tune)
+  (cl-loop for note across tune
+           for i downfrom 4
+           sum (* (- (upcase note) ?A) (expt 7 i))))
+
+(defsubst nethack-interhack--mastermind-unhash (hash)
+  (aref mastermind-lookup-table hash))
+
+(defun nethack-interhack--mastermind-judge (real guess)
+  (cl-loop
+        for rnote across real
+        for gnote across guess
+        if (= rnote gnote) sum 1 into blacks
+        else count (cl-find gnote real) into whites
+        finally return (+ (ash (or blacks 0) 3) (or whites 0))))
+
+(defvar nethack-interhack--mastermind-guess nil) ;; what the user actually guessed
+(defvar nethack-interhack--mastermind-suggested-guess nil) ;; memoized storage for nethack-interhack--mastermind-guess
+(defvar nethack-interhack--mastermind-response nil) ;; # of blacks and whites from the codemaster
+(defvar nethack-interhack--mastermind-possible-codes #&0"")
+(defvar nethack-interhack--mastermind-lookup-table #&0"")
+
+(defun nethack-interhack--mastermind-guess ()
+  (if (and (not nethack-interhack--mastermind-guess) nethack-interhack--mastermind-possible-codes (= (bool-vector-count-population nethack-interhack--mastermind-possible-codes) (length nethack-interhack--mastermind-possible-codes)))
+      "AABBC"
+    (let ((blacks (car nethack-interhack--mastermind-response))
+          (whites (cdr nethack-interhack--mastermind-response)))
+      (when (and nethack-interhack--mastermind-possible-codes (or whites blacks))
+        ;; eliminate any codes that cannot possibly be the correct answer
+        (cl-loop
+              with gotta-go-fast = (+ (ash (or blacks 0) 3) (or whites 0))
+              for code-possible across-ref nethack-interhack--mastermind-possible-codes
+              for code from 0
+              if code-possible do (unless (= (nethack-interhack--mastermind-judge (nethack-interhack--mastermind-unhash code) nethack-interhack--mastermind-guess)
+                                             gotta-go-fast)
+                                    (setf code-possible nil)))
+        ;; calculate the next guess
+        (cl-loop
+              for code-possible across nethack-interhack--mastermind-possible-codes
+              for code from 0
+              with best = (cons -1 most-positive-fixnum)
+              if code-possible do (let ((ncodes-remaining (cl-loop
+                                                             with ansatz = (nethack-interhack--mastermind-unhash code)
+                                                             with histogram = (make-vector 41 0)
+                                                             for possible across nethack-interhack--mastermind-possible-codes
+                                                             for i from 0
+                                                             if possible do (cl-incf (aref histogram (nethack-interhack--mastermind-judge ansatz (nethack-interhack--mastermind-unhash i))))
+                                                             finally return (cl-loop for i across histogram maximize i))))
+                                 (when (< ncodes-remaining (cdr best))
+                                   (setf best (cons code ncodes-remaining))))
+              finally return (nethack-interhack--mastermind-unhash (car best)))))))
+
+(defun nethack-interhack-mastermind ()
+  "Provides a GTO default input for the drawbridge tune."
+  (interactive)
+  (setq nethack-interhack--mastermind-guess nil)
+  (setq nethack-interhack--mastermind-suggested-guess nil)
+  (setq nethack-interhack--mastermind-response (cons nil nil))
+  (setq nethack-interhack--mastermind-possible-codes (make-bool-vector (expt 7 5) t))
+  (with-memoization nethack-interhack--mastermind-lookup-table
+    (let ((v (make-vector (expt 7 5) "")))
+      (cl-loop
+            for code across-ref v
+            for i from 0
+            do (setf code (nethack-interhack--mastermind-unhash i)))
+      v))
+
+  (nethack-interhack--toggle-advice
+   nethack-nhapi-message "mastermind-response"
+   :after (_attr str)
+   (when (string-match "You hear .*\\([[:digit:]]\\) gears? turn\\." str)
+     (setf (car nethack-interhack--mastermind-response) (string-to-number (match-string 1 str))))
+   (when (string-match "You hear .*\\([[:digit:]]\\) tumblers? click.*\\." str)
+     (setf (cdr nethack-interhack--mastermind-response) (string-to-number (match-string 1 str))))
+   (when (string-match "You \\(?:dream that you see\\|sense\\|see\\) a drawbridge \\(?:going\\|coming\\) down!" str)
+     (setq nethack-interhack--mastermind-possible-codes nil)))
+
+  (nethack-interhack--toggle-advice
+   nethack-nhapi-getlin "mastermind"
+   :around (fn ques &optional initial)
+   (if-let (((string-match-p "What tune are you playing\\? \\[5 notes, A-G\\]" ques))
+            (suggested-guess (with-memoization nethack-interhack--mastermind-suggested-guess (nethack-interhack--mastermind-guess))))
+       (let ((response (condition-case nil (nethack-read-line (concat ques " " (propertize (format "\nHint: %s" suggested-guess) 'face 'nethack-interhack--hint-face)) initial) (quit "\033"))))
+         (when (string-match-p "[a-h]\\{5\\}" response)
+           (setq nethack-interhack--mastermind-guess (replace-regexp-in-string "h" "b" response))
+           (setq nethack-interhack--mastermind-suggested-guess nil)
+           (setq nethack-interhack--mastermind-response (cons nil nil)))
+         (funcall (if nethack-proc #'nethack-send #'message) response))
+     (funcall fn ques initial))))
+
 
 (defun nethack-interhack-donate ()
   "Automatically calculate the optimal donation for priests."
@@ -84,6 +180,76 @@
    (when (string-match-p "How much will you offer\\?" prompt)
      (let ((lvl (string-to-number (cadr (assoc-string "experience-level" nethack-status-attributes)))))
        (run-at-time 0.1 nil (lambda () (nethack-interhack--hint-message "Hint: %d gold" (* 400 lvl))))))))
+
+
+(defun nethack-interhack-vault-guard ()
+  "Provide a sensible default name to give to the vault guard."
+  (interactive)
+  (nethack-interhack--toggle-advice
+   nethack-nhapi-getlin "vault-guard"
+   :filter-args (prompt &optional initial)
+   (when (string-match-p "\\(?:You are required to supply your name\\. -\\|\"Hello stranger, who are you\\?\"\\)" prompt)
+     ;; unfortunately there's no way to check if croesus is dead if loading a savefile; caveat emptor.
+     (setq initial (if (nethack-interhack--search-messages "Killed croesus")
+                       (car (split-string (cadr (assoc-string "title" nethack-status-attributes))))
+                     "Croesus")))
+   (list prompt initial)))
+
+
+(defun nethack-interhack-wand-identify ()
+  "Print a message explaining the effect of zapping an engraving."
+  (nethack-interhack--toggle-advice
+   nethack-nhapi-message "wand-identify"
+   :after (_attr str)
+   (pcase str
+     ((rx "The engraving now reads: \".*?\"") (nethack-interhack--hint-message "Hint: This is a wand of polymorph"))
+     ((rx "The wand unsuccessfully fights your attempt to write!") (nethack-interhack--hint-message "Hint: This is a wand of striking"))
+     ((rx "A few ice cubes drop from the wand\\.") (nethack-interhack--hint-message "Hint: This is a wand of cold"))
+     ((rx "The \\w+ is riddled by bullet holes!") (nethack-interhack--hint-message "Hint: This is a wand of magic missile"))
+     ((rx "The bugs on the \\w+ slow down!") (nethack-interhack--hint-message "Hint: This is a wand of slow monster"))
+     ((rx "The bugs on the \\w+ speed up!") (nethack-interhack--hint-message "Hint: This is a wand of speed monster"))
+     ((and (rx "The engraving on the \\w+ vanishes!") (guard (nethack-interhack--search-messages "A few ice cubes drop from the wand\\." 100))) (nethack-interhack--hint-message "Hint: This is either a wand of cancellation, teleportation, or make invisible."))
+     ((rx "The bugs on the \\w+ stop moving!") (nethack-interhack--hint-message "Hint: This is either a wand of sleep or death")))))
+
+(defvar nethack-interhack--ring-identify-debounce nil)
+
+(defun nethack-interhack-ring-identify ()
+  "Print a message explaining what ring was dropped into a sink."
+  (nethack-interhack--toggle-advice
+   nethack-nhapi-message "wand-identify"
+   :after (_attr str)
+   (pcase str
+     ;; only print the hint for the first item to vanish from the sink
+     ((and (guard (not nethack-interhack--ring-identify-debounce)) (rx "Suddenly, \\w+ vanishes from the sink!")) (nethack-interhack--hint-message "Hint: That was a ring of hunger") (setq nethack-interhack--ring-identify-debounce t) (run-at-time 0.1 nil (lambda () (setq nethack-interhack--ring-identify-debounce nil))))
+     ((rx "The faucets flash brightly for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of adornment"))
+     ((rx "The sink glows \\(?:silver|black\\) for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of protection"))
+     ((rx "The sink looks nothing like a fountain\\.") (nethack-interhack--hint-message "Hint: That was a ring of protection from shape changers"))
+     ((rx "The sink seems to blend into the floor for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of stealth"))
+     ((rx "The water flow seems fixed\\.") (nethack-interhack--hint-message "Hint: That was a ring of sustain ability"))
+     ((rx "The sink glows white for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of warning"))
+     ((rx "Several flies buzz around the sink\\.") (nethack-interhack--hint-message "Hint: That was a meat ring"))
+     ((rx "Several flies buzz angrily around the sink\\.") (nethack-interhack--hint-message "Hint: That was a ring of aggravate monster"))
+     ((rx "You hear loud noises coming from the drain") (nethack-interhack--hint-message "Hint: That was a ring of conflict"))
+     ((rx "The cold water faucet flashes brightly for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of cold resistance"))
+     ((rx "The water flow seems \\(?:greater\\|lesser\\) now\\.") (nethack-interhack--hint-message "Hint: That was a ring of gain constitution"))
+     ((rx "The water flow seems \\(?:stronger\\|weaker\\) now\\.") (nethack-interhack--hint-message "Hint: That was a ring of gain strength"))
+     ((rx "The water flow \\(?:hits\\|misses\\) the drain\\.") (nethack-interhack--hint-message "Hint: That was a ring of increase accuracy"))
+     ((rx "The water's force seems \\(?:greater\\|smaller\\) now\\.") (nethack-interhack--hint-message "Hint: That was a ring of increase damage"))
+     ((rx "You don't see anything happen to the sink\\.") (nethack-interhack--hint-message "Hint: That was a ring of invisibility"))
+     ((rx "You smell rotten \\w+\\.") (nethack-interhack--hint-message "Hint: That was a ring of poison resistance"))
+     ((rx "You see some air in the sink\\.") (nethack-interhack--hint-message "Hint: That was a ring of see invisible"))
+     ((rx "Static electricity surrounds the sink\\.") (nethack-interhack--hint-message "Hint: That was a ring of shock resistance"))
+     ((rx "The hot water faucet flashes brightly for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of fire resistance"))
+     ((rx "You see the ring slide right down the drain!") (nethack-interhack--hint-message "Hint: That was a ring of free action"))
+     ((rx "The sink quivers upward for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of levitation"))
+     ((rx "The sink looks as good as new\\.") (nethack-interhack--hint-message "Hint: That was a ring of regeneration"))
+     ((rx "You thought your \\w+ got lost in the sink, but there it is!") (nethack-interhack--hint-message "Hint: This is a ring of searching"))
+     ((rx "The ring is regurgitated!") (nethack-interhack--hint-message "Hint: This is a ring of slow digestion"))
+     ((rx "The sink momentarily vanishes\\.") (nethack-interhack--hint-message "Hint: That was a ring of teleportation"))
+     ((rx "The sink looks like it is being beamed aboard somewhere\\.") (nethack-interhack--hint-message "Hint: That was a ring of teleport control"))
+     ((rx "The sink momentarily looks like a \\w+\\.") (nethack-interhack--hint-message "Hint: That was a ring of polymorph"))
+     ((rx "The sink momentarily looks like a regularly erupting geyser\\.") (nethack-interhack--hint-message "Hint: That was a ring of polymorph control")))))
+
 
 (defun nethack-interhack--randomized-item-type (str)
   (let* ((randomized-appearances '(("scroll" . ("ZELGO MER" "JUYED AWK YACC" "NR 9" "XIXAXA XOXAXA XUXAXA" "PRATYAVAYAH" "DAIYEN FOOELS" "LEP GEX VEN ZEA" "PRIRUTSENIE" "ELBIB YLOH" "VERR YED HORRE" "VENZAR BORGAVVE" "THARR" "YUM YUM" "KERNOD WEL" "ELAM EBOW" "DUAM XNAHT" "ANDOVA BEGARIN" "KIRJE" "VE FORBRYDERNE" "HACKEM MUCHE" "VELOX NEB" "FOOBIE BLETCH" "TEMOV" "GARVEN DEH" "READ ME" "ETAOIN SHRDLU" "LOREM IPSUM" "FNORD" "KO BATE" "ABRA KA DABRA" "ASHPD SODALG" "MAPIRO MAHAMA DIROMAT" "GNIK SISI VLE" "HAPAX LEGOMENON" "EIRIS SAZUN IDISI" "PHOL ENDE WODAN" "GHOTI" "ZLORFIK" "VAS CORP BET MANI" "STRC PRST SKRZ KRK" "XOR OTA"))
@@ -202,12 +368,13 @@
              (push (alist-get (round (setq numerator (* numerator num)) (setq denominator (* denominator denom))) price-table) possible-items))
        (run-at-time 0.2 nil (lambda () (nethack-interhack--hint-message "\nPossible %s: %s" type (string-join (mapcan #'identity possible-items) ", "))))))))
 
+
 (defun nethack-interhack-common-wishes ()
   "Provide a list of common items to wish for."
   (interactive)
   (nethack-interhack--toggle-advice
    nethack-nhapi-getlin "common-wishes"
-   :around (fn prompt &optional _initial)
+   :around (fn prompt &optional initial)
    (if (string-match-p "For what do you wish\\?" prompt)
        (let* ((alignment (cadr (assoc-string "alignment" nethack-status-attributes)))
               (role (nth 1 (nethack-interhack--search-messages "the [^ ]+ \\([^ ]+\\), welcome back to NetHack!$" 100 t)))
@@ -260,27 +427,15 @@
                     (and (string= ret "\033") (not (yes-or-no-p "Cancel wish?"))))
            (setq ret (condition-case _ (completing-read (concat prompt " ") wishes nil 'confirm-after-completion) (quit "\033"))))
          (funcall (if nethack-proc #'nethack-send #'message) ret))
-     (funcall fn prompt _initial))))
+     (funcall fn prompt initial))))
 
-(defun nethack-interhack-vault-guard ()
-  "Provide a sensible default name to give to the vault guard."
-  (interactive)
-  (nethack-interhack--toggle-advice
-   nethack-nhapi-getlin "vault-guard"
-   :filter-args (prompt &optional initial)
-   (when (string-match-p "\\(?:You are required to supply your name\\. -\\|\"Hello stranger, who are you\\?\"\\)" prompt)
-     ;; unfortunately there's no way to check if croesus is dead if loading a savefile; caveat emptor.
-     (setq initial (if (nethack-interhack--search-messages "Killed croesus")
-                       (car (split-string (cadr (assoc-string "title" nethack-status-attributes))))
-                     "Croesus")))
-   (list prompt initial)))
 
 (defun nethack-interhack-common-genocides ()
   "Provide a list of common monsters/classes to genocide."
   (interactive)
   (nethack-interhack--toggle-advice
    nethack-nhapi-getlin "common-genocides"
-   :around (fn prompt &optional _initial)
+   :around (fn prompt &optional initial)
    (if (string-match "What \\(type\\|class\\) of monsters? do you want to genocide\\?" prompt)
        (let* ((genocide-type (match-string 1 prompt))
               (self (nethack-interhack--search-messages "the \\([^ ]+\\) \\([^ ]+\\), welcome back to NetHack!$" 100 t))
@@ -379,16 +534,13 @@
                                        '("dwarfs?"
                                          "hobbits?"
                                          "bugbears?"
-                                         "mind flayers?"
-                                         ))
+                                         "mind flayers?"))
                                    ,@(when (string= (nth 1 self) "gnomish")
-                                       '("gnomes?")
-                                       )
+                                       '("gnomes?"))
                                    ,@(when (string= (nth 1 self) "orcish")
                                        '("\\(?:hob\\)?goblins?"
                                          "orcs?"
-                                         "uruk[- ]hais?"
-                                         ))))
+                                         "uruk[- ]hais?"))))
               (candidates (if (string= genocide-type "class")
                               class-genocides
                             (append monster-genocides reverse-genocides)))
@@ -410,60 +562,137 @@
                     (and (string= ret "\033") (not (yes-or-no-p "Cancel genocide?"))))
            (setq ret (condition-case _ (completing-read (concat prompt " ") candidates nil 'confirm-after-completion) (quit "\033"))))
          (funcall (if nethack-proc #'nethack-send #'message) ret))
-     (funcall fn prompt _initial))))
+     (funcall fn prompt initial))))
 
-(defun nethack-interhack-wand-identify ()
-  "Print a message explaining the effect of zapping an engraving."
-  (nethack-interhack--toggle-advice
-   nethack-nhapi-message "wand-identify"
-   :after (_attr str)
-   (pcase str
-     ((rx "The engraving now reads: \".*?\"") (nethack-interhack--hint-message "Hint: This is a wand of polymorph"))
-     ((rx "The wand unsuccessfully fights your attempt to write!") (nethack-interhack--hint-message "Hint: This is a wand of striking"))
-     ((rx "A few ice cubes drop from the wand\\.") (nethack-interhack--hint-message "Hint: This is a wand of cold"))
-     ((rx "The \\w+ is riddled by bullet holes!") (nethack-interhack--hint-message "Hint: This is a wand of magic missile"))
-     ((rx "The bugs on the \\w+ slow down!") (nethack-interhack--hint-message "Hint: This is a wand of slow monster"))
-     ((rx "The bugs on the \\w+ speed up!") (nethack-interhack--hint-message "Hint: This is a wand of speed monster"))
-     ((and (rx "The engraving on the \\w+ vanishes!") (guard (nethack-interhack--search-messages "A few ice cubes drop from the wand\\." 100))) (nethack-interhack--hint-message "Hint: This is either a wand of cancellation, teleportation, or make invisible."))
-     ((rx "The bugs on the \\w+ stop moving!") (nethack-interhack--hint-message "Hint: This is either a wand of sleep or death")))))
 
-(defvar nethack-interhack--ring-identify-debounce nil)
-(defun nethack-interhack-ring-identify ()
-  "Print a message explaining what ring was dropped into a sink."
+(defmacro nethack-interhack--special-spell (role str)
+  ;; THIS IS UNHYGENIC
+  (let ((s (copy-sequence str)))
+    (add-face-text-property 0 (length s) 'underline t s)
+    `(if (string-match-p ,role (nth 1 self)) ,s ,str)))
+
+(defmacro nethack-interhack--emergency-spell (str)
+  ;; THIS IS UNHYGENIC
+  `(let ((s (copy-sequence ,str)))
+     (add-face-text-property 0 (length s)
+                             (pcase (nth 1 self)
+                               ((rx "Healer") 'nethack-bright-green-face)
+                               ((rx "Knight") 'nethack-green-face)
+                               ((rx "Monk") 'nethack-green-face)
+                               ((rx "Priest\\(ess\\)") 'nethack-green-face)
+                               ((rx "Ranger") 'nethack-red-face)
+                               ((rx "Tourist") 'nethack-brown-face)
+                               ((rx "Valkyrie") 'nethack-green-face))
+                             t s)
+     s))
+
+(defun nethack-interhack-magic-marker ()
+  "Provide an annotated completing read interface for magic markers."
+  (interactive)
   (nethack-interhack--toggle-advice
-   nethack-nhapi-message "wand-identify"
-   :after (_attr str)
-   (pcase str
-     ;; only print the hint for the first item to vanish from the sink
-     ((and (guard (not nethack-interhack--ring-identify-debounce)) (rx "Suddenly, \\w+ vanishes from the sink!")) (nethack-interhack--hint-message "Hint: That was a ring of hunger") (setq nethack-interhack--ring-identify-debounce t) (run-at-time 0.1 nil (lambda () (setq nethack-interhack--ring-identify-debounce nil))))
-     ((rx "The faucets flash brightly for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of adornment"))
-     ((rx "The sink glows \\(?:silver|black\\) for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of protection"))
-     ((rx "The sink looks nothing like a fountain\\.") (nethack-interhack--hint-message "Hint: That was a ring of protection from shape changers"))
-     ((rx "The sink seems to blend into the floor for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of stealth"))
-     ((rx "The water flow seems fixed\\.") (nethack-interhack--hint-message "Hint: That was a ring of sustain ability"))
-     ((rx "The sink glows white for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of warning"))
-     ((rx "Several flies buzz around the sink\\.") (nethack-interhack--hint-message "Hint: That was a meat ring"))
-     ((rx "Several flies buzz angrily around the sink\\.") (nethack-interhack--hint-message "Hint: That was a ring of aggravate monster"))
-     ((rx "You hear loud noises coming from the drain") (nethack-interhack--hint-message "Hint: That was a ring of conflict"))
-     ((rx "The cold water faucet flashes brightly for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of cold resistance"))
-     ((rx "The water flow seems \\(?:greater\\|lesser\\) now\\.") (nethack-interhack--hint-message "Hint: That was a ring of gain constitution"))
-     ((rx "The water flow seems \\(?:stronger\\|weaker\\) now\\.") (nethack-interhack--hint-message "Hint: That was a ring of gain strength"))
-     ((rx "The water flow \\(?:hits\\|misses\\) the drain\\.") (nethack-interhack--hint-message "Hint: That was a ring of increase accuracy"))
-     ((rx "The water's force seems \\(?:greater\\|smaller\\) now\\.") (nethack-interhack--hint-message "Hint: That was a ring of increase damage"))
-     ((rx "You don't see anything happen to the sink\\.") (nethack-interhack--hint-message "Hint: That was a ring of invisibility"))
-     ((rx "You smell rotten \\w+\\.") (nethack-interhack--hint-message "Hint: That was a ring of poison resistance"))
-     ((rx "You see some air in the sink\\.") (nethack-interhack--hint-message "Hint: That was a ring of see invisible"))
-     ((rx "Static electricity surrounds the sink\\.") (nethack-interhack--hint-message "Hint: That was a ring of shock resistance"))
-     ((rx "The hot water faucet flashes brightly for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of fire resistance"))
-     ((rx "You see the ring slide right down the drain!") (nethack-interhack--hint-message "Hint: That was a ring of free action"))
-     ((rx "The sink quivers upward for a moment\\.") (nethack-interhack--hint-message "Hint: That was a ring of levitation"))
-     ((rx "The sink looks as good as new\\.") (nethack-interhack--hint-message "Hint: That was a ring of regeneration"))
-     ((rx "You thought your \\w+ got lost in the sink, but there it is!") (nethack-interhack--hint-message "Hint: This is a ring of searching"))
-     ((rx "The ring is regurgitated!") (nethack-interhack--hint-message "Hint: This is a ring of slow digestion"))
-     ((rx "The sink momentarily vanishes\\.") (nethack-interhack--hint-message "Hint: That was a ring of teleportation"))
-     ((rx "The sink looks like it is being beamed aboard somewhere\\.") (nethack-interhack--hint-message "Hint: That was a ring of teleport control"))
-     ((rx "The sink momentarily looks like a \\w+\\.") (nethack-interhack--hint-message "Hint: That was a ring of polymorph"))
-     ((rx "The sink momentarily looks like a regularly erupting geyser\\.") (nethack-interhack--hint-message "Hint: That was a ring of polymorph control")))))
+   nethack-nhapi-getlin "magic-marker"
+   :around (fn prompt &optional initial)
+   (if (string-match "What type of \\(scroll\\|spellbook\\) do you want to write\\?" prompt)
+       (let* ((spell-type (match-string 1 prompt))
+              (self (nethack-interhack--get-role-race))
+              (spells `(("scroll" . (("Mail" . (0 . ""))
+                                     ("Amnesia" . (1 . ""))
+                                     ("Earth" . (1 . ""))
+                                     ("Fire" . (1 . ""))
+                                     ("Gold detection" . (1 . ""))
+                                     ("Food detection" . (1 . ""))
+                                     ("Light" . (1 . ""))
+                                     ("Magic mapping" . (1 . ""))
+                                     ("Create monster" . (2 . ""))
+                                     ("Destroy armor" . (2 . ""))
+                                     ("Punishment" . (2 . ""))
+                                     ("Confuse monster" . (3 . ""))
+                                     ("Identify" . (4 . ""))
+                                     ("Charging" . (5 . ""))
+                                     ("Enchant armor" . (5 . ""))
+                                     ("Enchant weapon" . (5 . ""))
+                                     ("Remove curse" . (5 . ""))
+                                     ("Scare monster" . (6 . ""))
+                                     ("Stinking cloud" . (6 . ""))
+                                     ("Taming" . (6 . ""))
+                                     ("Teleportation" . (6 . ""))
+                                     ("Genocide" . (7 . ""))))
+                        ("spellbook" . (("Novel" . (1 . ""))
+                                        ("Detect monsters" . (1 . "Divination"))
+                                        ("Force bolt" . (1 . "Attack"))
+                                        (,(nethack-interhack--emergency-spell "Healing") . (1 . "Healing"))
+                                        ("Jumping" . (1 . "Escape"))
+                                        ("Knock" . (1 . "Matter"))
+                                        ("Light" . (1 . "Divination"))
+                                        ("Protection" . (1 . "Clerical"))
+                                        ("Sleep" . (1 . "Enchantment"))
+                                        ("Confuse monster" . (2 . "Enchantment"))
+                                        ("Create monster" . (2 . "Clerical"))
+                                        (,(nethack-interhack--emergency-spell "Cure blindness") . (2 . "Healing"))
+                                        ("Detect food" . (2 . "Divination"))
+                                        ("Drain life" . (2 . "Attack"))
+                                        (,(nethack-interhack--special-spell "Wizard" "Magic missile") . (2 . "Attack"))
+                                        ("Slow monster" . (2 . "Enchantment"))
+                                        ("Wizard lock" . (2 . "Matter"))
+                                        ("Cause fear" . (3 . "Enchantment"))
+                                        (,(nethack-interhack--special-spell "Tourist" "Charm monster") . (3 . "Enchantment"))
+                                        (,(nethack-interhack--special-spell "Samurai" "Clairvoyance") . (3 . "Divination"))
+                                        (,(nethack-interhack--emergency-spell (nethack-interhack--special-spell "Healer" "Cure sickness")) . (3 . "Healing"))
+                                        ("Detect unseen" . (3 . "Divination"))
+                                        (,(nethack-interhack--emergency-spell "Extra healing") . (3 . "Healing"))
+                                        (,(nethack-interhack--special-spell "Barbarian" "Haste self") . (3 . "Escape"))
+                                        ("Identify" . (3 . "Divination"))
+                                        (,(nethack-interhack--emergency-spell (nethack-interhack--special-spell "Priest\\(?:ess\\)" "Remove curse")) . (3 . "Clerical"))
+                                        ("Stone to flesh" . (3 . "Healing"))
+                                        (,(nethack-interhack--special-spell "Valkyrie" "Cone of cold") . (4 . "Attack"))
+                                        (,(nethack-interhack--special-spell "Rogue" "Detect treasure") . (4 . "Divination"))
+                                        ("Fireball" . (4 . "Attack"))
+                                        (,(nethack-interhack--special-spell "Ranger" "Invisibility") . (4 . "Escape"))
+                                        ("Levitation" . (4 . "Escape"))
+                                        (,(nethack-interhack--emergency-spell (nethack-interhack--special-spell "Monk" "Restore ability")) . (4 . "Healing"))
+                                        (,(nethack-interhack--special-spell "Cave\\(?:wo\\)man" "Dig") . (5 . "Matter"))
+                                        (,(nethack-interhack--special-spell "Archeologist" "Magic mapping") . (5 . "Divination"))
+                                        ("Create familiar" . (6 . "Clerical"))
+                                        ("Polymorph" . (6 . "Matter"))
+                                        ("Teleport away" . (6 . "Escape"))
+                                        (,(nethack-interhack--special-spell "Knight" "Turn undead") . (6 . "Clerical"))
+                                        ("Cancellation" . (7 . "Matter"))
+                                        ("Finger of death" . (7 . "Attack"))))))
+              (ink-costs '(("scroll" . ((0 . "1")
+                                        (1 . "4–7")
+                                        (2 . "5–9")
+                                        (3 . "6–11")
+                                        (4 . "7–13")
+                                        (5 . "8–15")
+                                        (6 . "10–19")
+                                        (7 . "15–29")))
+                           ("spellbook" . ((1 . "5–9")
+                                           (2 . "10–19")
+                                           (3 . "15–29")
+                                           (4 . "20–39")
+                                           (5 . "25–49")
+                                           (6 . "30–59")
+                                           (7 . "35–69")))))
+              (ink-alist (cdr (assoc-string spell-type ink-costs)))
+              (candidates (cdr (assoc-string spell-type spells)))
+              (longest-candidate (apply #'max (mapcar (lambda (c) (length (car c))) candidates)))
+              (completion-extra-properties `(:annotation-function
+                                             ,(lambda (cand)
+                                                (format "%s    %s"
+                                                        (make-string (- longest-candidate (length cand)) ? )
+                                                        (propertize (cddr (assoc-string cand candidates)) 'face 'font-lock-doc-face)))
+                                              :display-sort-function
+                                              ,(lambda (cands)
+                                                 (cl-sort cands (lambda (a b) (< (cadr (assoc-string a candidates)) (cadr (assoc-string b candidates))))))
+                                              :group-function
+                                              ,(lambda (cand transform)
+                                                 (if transform cand
+                                                   (format "Level %s (%s charges)"
+                                                           (cadr (assoc-string cand candidates))
+                                                           (alist-get (cadr (assoc-string cand candidates)) ink-alist)))))))
+         (funcall (if nethack-proc #'nethack-send #'message) (condition-case _ (completing-read (concat prompt " ") candidates nil 'confirm-after-completion) (quit "\033"))))
+     (funcall fn prompt initial))))
+
 
 (defun nethack-interhack--old-corpses-turn-number ()
   (if-let ((turn (cadr (assoc-string "time" nethack-status-attributes))))
@@ -471,26 +700,32 @@
     (warn "Turn number not present in status attributes, disabling old corpses plugin...")
     (nethack-interhack-old-corpses) ;; disable
     most-positive-fixnum))
+
 (defvar nethack-interhack--death-tracker nil)
+
 (defun nethack-interhack-old-corpses ()
   "Warn the user if a corpse is too old to eat."
   (nethack-interhack--toggle-advice
    nethack-nhapi-message "old-corpses"
    :after (_attr str)
-   (when (string-match-p "You kill the \\([^!]+\\)!" msg)
-     (push (cons (match-string 1 msg) (nethack-interhack--old-corpses-turn-number)) nethack-interhack--death-tracker)))
+   (when (string-match-p "You kill the \\([^!]+\\)!" str)
+     (push (cons (match-string 1 str) (nethack-interhack--old-corpses-turn-number)) nethack-interhack--death-tracker)))
 
   (nethack-interhack--toggle-advice
    nethack-nhapi-yn-function "old-corpses"
-   :filter-args (ques _choices _default)
+   :filter-args (ques choices default)
    (when-let* (((string-match-p "There is an? \\(.*?\\) corpse here; eat it\\?" ques))
                (monster (match-string 1 ques))
-               (turns-ago (- (nethack-interhack--turn-number) (cdr-safe (assoc-string monster nethack-interhack--death-tracker))))
-               ((and (<= 50 turns-ago) (not (memql monster '("lichen" "lizard"))))))
+               (turns-ago (- (nethack-interhack--old-corpses-turn-number) (or (cdr-safe (assoc-string monster nethack-interhack--death-tracker)) -50)))
+               ((and (<= turns-ago 50) (not (member monster '("lichen" "lizard"))))))
      (setq ques (append ques (format #("\nWarning! That monster type was killed %d turns ago." 0 52 (face nethack-interhack-hint-face)) turns-ago))))
-   (list ques _choices _default)))
+   (list ques choices default)))
 
 
 
 (provide 'nethack-interhack)
 ;;; nethack-interhack.el ends here
+
+;; Local Variables:
+;; byte-compile-warnings: (not unresolved)
+;; End:

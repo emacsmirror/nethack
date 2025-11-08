@@ -1,0 +1,78 @@
+This directory contains extra features that for one reason or another are not packaged with the base nethack-el package.
+
+* Interhack
+[[file:nethack-interhack.el][nethack-interhack.el]] is a port of [[https://taeb.github.io/interhack/][Interhack]] to nethack-el, and it's a great showcase of how you can augment the base NetHack experience with a little Elisp advice.
+This is not shipped with nethack-el because many plugins either trivialize some game mechanics, contain lots of "spoilers", or could otherwise be construed as cheats, so it might worsen the experience of some players.[fn:1]
+
+[fn:1] That having been said, this package intentionally does not contain anything bot-like to allow for usage in tournaments like [[https://tnnt.org/faq#general][TNNT]].
+
+You can enable a plugin by calling it interactively or in Elisp; calling it again toggles it off so take care to only call it once if enabling it in your init.el.
+Note that you can also toggle any plugin in the middle of a game of NetHack, although some features may not work correctly (e.g. ~nethack-interhack-old-corpses~ cannot warn you about corpses generated before it was enabled).
+
+Some plugins make extensive use of [[info:cl#Top][cl-lib]] macros, which can cause these plugins to run significantly slower as interpreted functions.
+Take ~nethack-interhack-mastermind~ as an example:
+#+begin_src elisp :exports both :results output
+(setq nethack-interhack--mastermind-lookup-table
+      (let ((v (make-vector (expt 7 5) "")))
+        (cl-loop
+              for code across-ref v
+              for i from 0
+              do (setf code (nethack-interhack--mastermind-unhash i)))
+        v))
+(cl-loop for file in (list (expand-file-name "nethack-interhack.el")
+                           (expand-file-name "nethack-interhack.elc")
+                           (comp-el-to-eln-filename (expand-file-name "nethack-interhack.el")))
+      do (let ((nethack-interhack--mastermind-response '(1 . 0))
+               (nethack-interhack--mastermind-possible-codes (make-bool-vector (expt 7 5) t))
+               (nethack-interhack--mastermind-guess "AABBC"))
+           (load file)
+           (print (benchmark-run nil (nethack-interhack--mastermind-guess)))))
+#+end_src
+
+#+RESULTS:
+: 
+: (4.930501 7 1.3193219999999428)
+: 
+: (2.73171 0 0.0)
+: 
+: (0.357429 0 0.0)
+
+For this reason it is highly recommended that you make sure that byte/native compilation is enabled.
+
+** List of plugins
+/Note:/ Some of the below plugins did not exist in Interhack, some plugins from Interhack are obsolete in modern versions of NetHack, and some plugins are planned but have not been added yet.
+
+- ~nethack-interhack-floating-eye~ :: Display floating eyes in bright cyan (or another face of your chosing)
+- ~nethack-interhack-mastermind~ :: Provide a close-to-optimal guess for solving the castle drawbridge Mastermind puzzle
+- ~nethack-interhack-donate~ :: Display how much gold to use when purchasing intrinsic protection and clairvoyance
+- ~nethack-interhack-vault-guard~ :: Try to give a sensible name to the vault guard (this will incorrectly supply "Croesus" as a name if Croesus was killed before loading the current save)
+- ~nethack-interhack-price-identification~ :: Automatically price ID items in shops (both buying and selling). Currently only magic armor, spellbooks, scrolls, wands, rings, and potions are supported
+- ~nethack-interhack-common-wishes~ :: Provide a list of common items to wish for
+- ~nethack-interhack-common-genocides~ :: Provide a list of common monsters to genocide
+- ~nethack-interhack-magic-marker~ :: Provide a list of scrolls/spellbooks that can be written and how many charges they require. Also fontifies your role's special spell and emergency spells depending on your role's casting penalty
+- ~nethack-interhack-wand-identify~ :: Translate the message from engrave-identification
+- ~nethack-interhack-ring-identify~ :: Translate the message from sink-identification
+- ~nethack-interhack-old-corpses~ :: Try to guess if a corpse is too old to eat. Currently this is quite flaky as it tracks when the last monster of a given species was killed, so you could kill a winter wolf cub and attempting to eat a different, older winter wolf cub corpse might incorrectly be considered safe
+
+** Interhack license
+#+begin_example
+Copyright (c) 2007 Shawn M Moore, Jesse Luehrs, and Jordan A Lewis
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+#+end_example
