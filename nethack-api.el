@@ -538,6 +538,10 @@ accessed 2021-04-23.")
                           key))))
     (message ques)))
 
+(define-advice nethack-nhapi-yn-function (:after (ques _choices _default))
+  (when (string= ques "Do you want to keep the save file?")
+    (nethack-nhapi-restore-window-configuration)))
+
 (defun nethack-nhapi-ask-direction (prompt)
   "Prompt the user for a direction."
   (if nethack-proc
