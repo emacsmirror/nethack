@@ -1,3 +1,9 @@
+2025-12-13  harumi  <h.kiyama0720@gmail.com>
+
+	* nethack-api.el (nethack-nhapi-restore-window-configuration): Only create status window if `nethack-status-style` is set to :buffer.
+        (nethack-nhapi-print-status): Rename t to :buffer.
+        * nethack.el (nethack-status-style): Likewise.
+
 2025-12-13  George Huebner  <george@feyor.sh>
 
 	* nethack-api.el (nethack-nhapi-print-status): Fixed a bug
