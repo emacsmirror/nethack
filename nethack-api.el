@@ -280,8 +280,9 @@ If CH is the character \"f\" for \"conditions\", then the string
        (setq header-line-format
              (nethack-status-string nethack-status-header-line-format))))
     (:mode-line
-     (setq mode-line-format
-           (nethack-status-string nethack-status-mode-line-format)))
+     (with-current-buffer nethack-map-buffer
+       (setq mode-line-format
+             (nethack-status-string nethack-status-mode-line-format))))
     (:map
      (with-current-buffer nethack-map-buffer
        (let ((p (next-single-property-change (point-min) 'nethack-status))
