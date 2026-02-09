@@ -1159,8 +1159,7 @@ the menu is dismissed."
        ,@body)))
 
 (defun nethack-nhapi-restore-window-configuration ()
-  "Layout the nethack windows according to the values
-`nethack-status-window-height' and `nethack-message-window-height'."
+  "Layout the NetHack windows in a sensible way."
   (unless nethack--window-configuration-before
     (setq nethack--window-configuration-before (window-state-get)))
 
@@ -1195,7 +1194,7 @@ the menu is dismissed."
                           (set-window-dedicated-p w-message nil)
 
                           (when (eq nethack-status-style :buffer)
-                            (let ((w-status (split-window-vertically (- nethack-status-window-height) w-map)))
+                            (let ((w-status (split-window-vertically -4 w-map)))
                               (set-window-buffer w-status nethack-status-buffer)
                               (set-window-dedicated-p w-status t)
                               (window-preserve-size w-status nil t)

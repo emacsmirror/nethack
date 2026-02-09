@@ -1,5 +1,12 @@
 2026-02-09  George Huebner  <george@feyor.sh>
 
+        * nethack.el (nethack-status-window-height): Remove.
+        (nethack-message-window-height): Likewise.
+	* nethack-api.el (nethack-nhapi-restore-window-configuration):
+	Likewise.
+
+2026-02-09  George Huebner  <george@feyor.sh>
+
         * nethack.el (nethack-el-version): Be a little more clever about
 	detecting the nethack-el version and also report the patched
 	NetHack version. Useful for people reporting bugs.

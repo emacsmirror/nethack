@@ -86,16 +86,6 @@
              (string-trim-right nethack--el-version)
              (or (car (nethack--get-version)) "could not determine NetHack version"))))
 
-(defcustom nethack-status-window-height 4
-  "Height of the status window."
-  :type '(integer)
-  :group 'nethack)
-
-(defcustom nethack-message-window-height 10
-  "Height of the message window."
-  :type '(integer)
-  :group 'nethack)
-
 (defcustom nethack-status-highlight-delay
   (if-let ((op (cdr-safe (nethack-options-set-p "statushilites"))))
       (string-to-number op)
