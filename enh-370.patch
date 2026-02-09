@@ -65,7 +65,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   */
  #define EDITLEVEL 130
  
-+#define LISP_VERSION "0.15.0"
++#define LISP_VERSION "0.15.1"
 +
  /*
   * Development status possibilities.
