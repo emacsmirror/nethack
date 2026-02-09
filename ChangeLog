@@ -1,3 +1,9 @@
+2026-02-09  George Huebner  <george@feyor.sh>
+
+        * nethack.el (nethack-el-version): Be a little more clever about
+	detecting the nethack-el version and also report the patched
+	NetHack version. Useful for people reporting bugs.
+
 2025-12-13  harumi  <h.kiyama0720@gmail.com>
 
 	* nethack-api.el (nethack-nhapi-restore-window-configuration): Only create status window if `nethack-status-style` is set to :buffer.

@@ -44,6 +44,7 @@
 (require 'nethack-lisprec)
 (require 'nethack-gen-tiles)
 
+(require 'cl-lib)
 (require 'url)
 (require 'dired-aux)
 (require 'face-remap)
@@ -53,11 +54,37 @@
   :group 'games)
 
 (defconst nethack-el-version "0.15.0")
-(defconst nethack-el-earliest-compatible-version "0.13.0")
 (defun nethack-el-version ()
-  "Print version of nethack-el."
+  "Print version of nethack-el and patched Nethack."
+  ;; credit to magit-version from Jonas Bernoulli's magit
   (interactive)
-  (message "nethack-el %s" nethack-el-version))
+  (let ((nethack--el-version
+         (let ((nethack--el (or load-file-name buffer-file-name)))
+           (unless (and nethack--el
+                        (member (file-name-nondirectory nethack--el)
+                                '("nethack.el" "nethack.el.gz")))
+             (let ((load-suffixes (reverse load-suffixes)))
+               (setq nethack--el (locate-library "nethack"))))
+           (setq nethack--el (and nethack--el (file-chase-links nethack--el)))
+           (if nethack--el
+               (let* ((dir (file-name-directory nethack--el))
+                      (dirname (file-name-nondirectory (directory-file-name dir))))
+                 (if-let ((gitdir (expand-file-name ".git" dir))
+                          ((executable-find "git"))
+                          (default-directory (and (file-exists-p gitdir) dir)))
+                     (shell-command-to-string "git describe --tags --dirty --always")
+                   (or (and (string-match-p "nethack-\\([0-9]\\{8\\}\\.[0-9]\\{4\\}\\)" dirname)
+                            (match-string 1 dirname))
+                       (ignore-errors
+                         (require 'lisp-mnt)
+                         (with-temp-buffer
+                           (insert-file-contents
+                            (locate-library "nethack.el" t))
+                           (lm-header "Version")))
+                       nethack-el-version)))))))
+    (message "nethack-el %s, %s"
+             (string-trim-right nethack--el-version)
+             (or (car (nethack--get-version)) "could not determine NetHack version"))))
 
 (defcustom nethack-status-window-height 4
   "Height of the status window."
@@ -458,7 +485,7 @@ See https://nethackwiki.com/wiki/Environment_variable for more information."
 
 (defcustom nethack-version
   "3.6.7"
-  "The NetHack version to download, install, and bulid."
+  "The NetHack version to download, install, and build."
   :group 'nethack
   :type 'string)
 
@@ -476,25 +503,34 @@ input a different version at their own peril."
   (interactive)
   (completing-read "NetHack version: " '("3.6.7" "3.7.0") nil nil))
 
+(defun nethack--get-version ()
+  "Determine the version of a patched NetHack if such a version is
+installed.  Checks whether a NetHack executable exists, and if running
+it results in an output with the expected form."
+  (when-let* ((version-string (and nethack-program
+                                   (file-executable-p nethack-program)
+                                   (shell-command-to-string
+                                    (concat nethack-program " --version"))))
+              (version-info (progn (string-match
+                                    (concat "NetHack Version "
+                                            "\\([0-9]+\\.[0-9]+\\.[0-9]+\\(?:-[0-9]+\\)?\\)"
+                                            " lisp-patch "
+                                            "\\([0-9]+\\.[0-9]+\\.[0-9]+\\)")
+                                    version-string)
+                                   (match-data))))
+    (let (ret)
+      (cl-loop
+            for (start end)
+            on version-info
+            by #'cddr
+            do (when (and start end) (push (substring-no-properties version-string start end) ret)))
+      (reverse ret))))
+
 (defun nethack-installed-p ()
-  "Determine if a patched NetHack is installed.
-Checks whether a NetHack executable exists, and if running it results
-in an output with prefix ``(nethack-nhapi-raw-print'' with the correct
-NetHack version and the correct version for the lisp-patch."
-  (and nethack-program
-       (file-executable-p nethack-program)
-       (let ((version-string
-              (shell-command-to-string
-               (concat nethack-program " --version"))))
-         (version<=
-          nethack-el-earliest-compatible-version
-          (and (string-match
-                (concat "NetHack Version "
-                        "[0-9]+\\.[0-9]+\\.[0-9]+\\(?:-[0-9]+\\)?"
-                        " lisp-patch "
-                        "\\([0-9]+\\.[0-9]+\\.[0-9]+\\)")
-                version-string)
-               (match-string-no-properties 1 version-string))))))
+  "Check whether a version of NetHack compatible with nethack-el is installed."
+  (version=
+   nethack-el-version
+   (nth 2 (nethack--get-version))))
 
 (defun nethack-build (&optional no-download-p)
   "Build the NetHack program in the background.
