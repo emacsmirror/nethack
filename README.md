@@ -1,5 +1,6 @@
 [![Test](https://github.com/Feyorsh/nethack-el/actions/workflows/test.yml/badge.svg)](https://github.com/Feyorsh/nethack-el/actions/workflows/test.yml)
 [![MELPA](https://melpa.org/packages/nethack-badge.svg)](https://melpa.org/#/nethack)
+[![IRC](./images/irc-badge.svg)](https://joinirc.at/ircs://irc.libera.chat#nethack-el)
 
 # `nethack-el`
 
@@ -35,7 +36,8 @@ All of the Elisp is GPLv3-or-later, and the patches are under the modified 3-cla
 *Nethack 3.7 in graphical Emacs with `(setq nethack-use-tiles "nethack370")`*
 
 ## Project Status
-I am semi-actively adding new features and fixing bugs as of September 2025.
+Save for a few cosmetic improvements and bonus features, I consider nethack-el to be mostly feature complete to the point where I have ascended using nethack-el and I prefer nethack-el to the builtin curses interface.
+That having been said, I'm receptive to feature requests so please open a discussion if you have ideas!
 I mostly work on things that affect how I play NetHack (i.e. my `nethackrc`), so please open an issue/PR if something doesn't work—it's likely I just don't use that feature and never ran into that particular issue.
 
 > [!IMPORTANT]
