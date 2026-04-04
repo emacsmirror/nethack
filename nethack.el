@@ -518,9 +518,10 @@ it results in an output with the expected form."
 
 (defun nethack-installed-p ()
   "Check whether a version of NetHack compatible with nethack-el is installed."
-  (version=
-   nethack-el-version
-   (nth 2 (nethack--get-version))))
+  (when-let ((reported-version (nethack--get-version)))
+    (version=
+     nethack-el-version
+     (nth 2 reported-version))))
 
 (defun nethack-build (&optional no-download-p)
   "Build the NetHack program in the background.
