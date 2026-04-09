@@ -675,7 +675,7 @@ Do not edit the value of this variable.  Instead, change the value of
 
 (defun nethack-nhapi-init-nhwindows (version executable &rest _args)
   "Function called by the nethack process for windowing setup."
-  (if (string-match-p "lisp patch \\([0-9]*\\.[0-9]*\\.[0-9]*\\)" version)
+  (if (string-match-p "lisp-patch \\([0-9]*\\.[0-9]*\\.[0-9]*\\)" version)
       (setq nethack-version (match-string 1))
     (warn "Could not detect version from NetHack process"))
   (setq nethack-directory (file-name-directory executable))
