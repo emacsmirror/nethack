@@ -501,13 +501,12 @@ it results in an output with the expected form."
                                    (file-executable-p nethack-program)
                                    (shell-command-to-string
                                     (concat nethack-program " --version"))))
-              (version-info (progn (string-match
-                                    (concat "NetHack Version "
-                                            "\\([0-9]+\\.[0-9]+\\.[0-9]+\\(?:-[0-9]+\\)?\\)"
-                                            " lisp-patch "
-                                            "\\([0-9]+\\.[0-9]+\\.[0-9]+\\)")
-                                    version-string)
-                                   (match-data))))
+              ((string-match (concat "NetHack Version "
+                                     "\\([0-9]+\\.[0-9]+\\.[0-9]+\\(?:-[0-9]+\\)?\\)"
+                                     " lisp-patch "
+                                     "\\([0-9]+\\.[0-9]+\\.[0-9]+\\)")
+                             version-string))
+              (version-info (match-data)))
     (let (ret)
       (cl-loop
             for (start end)
