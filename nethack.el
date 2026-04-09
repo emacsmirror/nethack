@@ -657,7 +657,7 @@ so, what version.
 
 Do not download (but do untar) if NO-DOWNLOAD-P is non-nil."
   (interactive)
-  (unless (nethack-installed-p)
+  (unless (and (nethack-installed-p) (not (equal current-prefix-arg '(4))))
     (if (or version
             (y-or-n-p "Need to (re)build the NetHack program, do it now?"))
         (progn
