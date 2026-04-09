@@ -402,8 +402,8 @@ attribute, the new value, the old value, and the percent."
                        ;; rendered correctly---remedy is for the user
                        ;; to set nethack-mono-font-family
                        (set-fontset-font "fontset-nethackmono" ?⌡ (font-spec :family ffamily))
-                       (when-let ((info (font-info ffamily))
-                                  (rendered-font (font-at 0 nil #("⌡" 0 1 (face tmp-face)))))
+                       (when-let* ((info (font-info ffamily))
+                                   (rendered-font (font-at 0 nil #("⌡" 0 1 (face tmp-face)))))
                          (and (string= (font-get rendered-font :family) ffamily)
                               (string-match-p "spacing=100" (aref info 1)))))
                      (font-family-list))
@@ -518,7 +518,7 @@ it results in an output with the expected form."
 
 (defun nethack-installed-p ()
   "Check whether a version of NetHack compatible with nethack-el is installed."
-  (when-let ((reported-version (nethack--get-version)))
+  (when-let* ((reported-version (nethack--get-version)))
     (version=
      nethack-el-version
      (nth 2 reported-version))))
@@ -777,7 +777,7 @@ Assumes nethack is not already running."
     (with-current-buffer nethack-map-buffer
       (goto-char (point-min))
       (while (not (eobp))
-        (when-let ((image (get-text-property (point) 'display)))
+        (when-let* ((image (get-text-property (point) 'display)))
           (image--set-property image :scale nethack-tiles-scale))
         (goto-char (next-single-char-property-change (point) 'display))))
     (clear-image-cache)))

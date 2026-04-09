@@ -174,8 +174,8 @@ Does nothing if TIME is nil."
                        (unless nethack-lisprec--timer (user-error "No lisprec recording currently playing")) ;; or parsing error...
                        (catch 'done
                          (while t
-                           (when-let ((prompt (format "Seek to (0-%s): " (nethack-lisprec--format-time-string end-time)))
-                                      (ret (nethack-lisprec--parse-time (read-string prompt))))
+                           (when-let* ((prompt (format "Seek to (0-%s): " (nethack-lisprec--format-time-string end-time)))
+                                       (ret (nethack-lisprec--parse-time (read-string prompt))))
                              (throw 'done ret)))))))
   (when (and nethack-lisprec--timer time)
     (if (time-less-p time (nth 2 (timer--args nethack-lisprec--timer)))

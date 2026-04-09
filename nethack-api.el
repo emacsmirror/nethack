@@ -405,11 +405,11 @@ accessed 2021-04-23.")
          ;; try to infer symset by checking the character used for the horizontal wall.
          (when nethack-nhapi-print-glyph--previous-ch
            (if (eq nethack-nhapi-print-glyph--previous-ch ch)
-               (when-let ((symset (pcase ch
-                                    (241 "DECgraphics")
-                                    (196 "IBMgraphics")
-                                    (?- (setq nethack-nhapi-print-glyph--previous-ch nil))
-                                    (_ nil))))
+               (when-let* ((symset (pcase ch
+                                     (241 "DECgraphics")
+                                     (196 "IBMgraphics")
+                                     (?- (setq nethack-nhapi-print-glyph--previous-ch nil))
+                                     (_ nil))))
                  (setq nethack-nhapi-print-glyph--previous-ch nil)
                  (push `("symset" ,symset) nethack-options)
                  (warn "Inferred symset to be %s, please put OPTIONS=symset:%1$s in your .nethackrc" symset))
@@ -800,8 +800,8 @@ The TYPE argument is legacy and serves no real purpose."
     (let ((buffer (nethack-menu-buffer menuid)))
       (if (and (= menuid 3) (nethack-options-set-p "perm_invent"))
           (delete-windows-on buffer nil) ;; end of game, delete inventory window
-        (when-let ((map-window (and nethack-map-buffer
-                                    (get-buffer-window nethack-map-buffer))))
+        (when-let* ((map-window (and nethack-map-buffer
+                                     (get-buffer-window nethack-map-buffer))))
           (select-window map-window)))
       (kill-buffer buffer)
       (setq nethack-menu-buffer-table
