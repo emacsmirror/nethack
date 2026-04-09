@@ -48,6 +48,7 @@
 (require 'url)
 (require 'dired-aux)
 (require 'face-remap)
+(declare-function lm-header "lisp-mnt")
 
 (defgroup nethack nil
   "Emacs Lisp frontend to the lisp window port of Nethack."
