@@ -166,7 +166,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (void) execl(mr, mr, (char *) 0);
          nh_terminate(EXIT_FAILURE);
      }
---- NetHack-NetHack-3.6.7_Released/clean/src/cmd.c	2025-08-27 11:53:15.060018445 -0500
+--- NetHack-NetHack-3.6.7_Released/src/cmd.c	2025-08-27 11:53:15.060018445 -0500
 +++ nethack/src/cmd.c	2025-08-28 11:05:53.360239625 -0500
 @@ -3467,7 +3467,7 @@
              doprwep, IFBURIED },

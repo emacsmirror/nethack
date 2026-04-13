@@ -47,23 +47,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #ifdef SHIM_GRAPHICS
  #ifndef DEFAULT_WINDOW_SYS
  #define DEFAULT_WINDOW_SYS "shim"
-
---- NetHack-NetHack-3.7.0_WIP/include/global.h	2025-09-26 13:04:41.965490430 -0500
-+++ nethack/include/global.h	2025-09-26 18:03:32.392235672 -0500
-@@ -257,7 +257,7 @@
- #endif
- 
- #if defined(X11_GRAPHICS) || defined(QT_GRAPHICS) || defined(GNOME_GRAPHICS) \
--    || defined(MSWIN_GRAPHICS)
-+    || defined(MSWIN_GRAPHICS) || defined(LISP_GRAPHICS)
- #ifndef NO_TILE_C
- #ifndef TILES_IN_GLYPHMAP
- #define TILES_IN_GLYPHMAP
 --- NetHack-NetHack-3.7.0_WIP/include/patchlevel.h	2025-08-24 10:26:20.396545904 -0500
 +++ nethack/include/patchlevel.h	2025-08-24 10:32:05.576673554 -0500
 @@ -19,6 +19,8 @@
   */
- #define EDITLEVEL 130
+ #define EDITLEVEL 137
  
 +#define LISP_VERSION "0.15.1"
 +
@@ -142,14 +130,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
  
  enum wp_ids { wp_tty = 1, wp_X11, wp_Qt, wp_mswin, wp_curses,
--              wp_chainin, wp_chainout, wp_safestartup, wp_shim,
-+              wp_chainin, wp_chainout, wp_safestartup, wp_lisp, wp_shim,
+-              wp_chainin, wp_chainout, wp_shim,
++              wp_chainin, wp_chainout, wp_lisp, wp_shim,
                wp_hup, wp_guistubs, wp_ttystubs,
- #ifdef OUTDATED_STUFF
-               wp_mac, wp_Gem, wp_Gnome, wp_amii, wp_amiv,
---- NetHack-NetHack-3.7.0_WIP/include/windconf.h	2025-09-01 18:37:37.969168936 -0500
-+++ nethack/include/windconf.h	2025-08-31 19:06:24.093628491 -0500
-@@ -99,7 +99,7 @@
+ #if defined(AMIGA)
+               wp_amii, wp_amiv,
+--- NetHack-NetHack-3.7.0_WIP/include/windconf.h	2026-04-13 10:17:15.169973151 -0500
++++ nethack/include/windconf.h	2026-04-13 10:33:46.438153121 -0500
+@@ -102,7 +102,7 @@
   */
  
  #ifdef __GNUC__
@@ -185,7 +173,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  
 --- NetHack-NetHack-3.7.0_WIP/src/options.c	2025-08-24 14:59:57.659282869 -0500
 +++ nethack/src/options.c	2025-08-24 15:30:38.895976359 -0500
-@@ -1068,7 +1068,7 @@
+@@ -1054,7 +1054,7 @@
  #endif
          return optn_ok;
      }
@@ -194,7 +182,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      if (req == do_handler) {
          return set_keyhandling_via_option();
      }
-@@ -3158,7 +3158,7 @@
+@@ -3152,7 +3152,7 @@
              bad_negation(allopt[optidx].name, TRUE);
              retval = optn_err;
          } else if (op != empty_optstr) {
@@ -203,7 +191,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              int itmp = match_str2attr(op, FALSE);
  
              if (itmp == -1) {
-@@ -3181,8 +3181,8 @@
+@@ -3175,8 +3175,8 @@
          return retval;
      }
      if (req == get_val || req == get_cnf_val) {
@@ -214,7 +202,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              Strcpy(opts, attr2attrname(iflags.wc2_petattr));
          } else
  #endif
-@@ -5301,8 +5301,8 @@
+@@ -5298,8 +5298,8 @@
              iflags.wc_ascii_map = negated;
              break;
          case opt_hilite_pet:
@@ -231,11 +219,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     necessarily have to be used by a binary with multiple window-ports */
  
  #if defined(TTY_GRAPHICS) || defined(X11_GRAPHICS) || defined(GEM_GRAPHICS) \
--    || defined(DUMPLOG) || defined(CURSES_GRAPHICS) || defined(SHIM_GRAPHICS)
-+    || defined(DUMPLOG) || defined(CURSES_GRAPHICS) || defined(LISP_GRAPHICS) || defined(SHIM_GRAPHICS)
+-    || defined(DUMPLOG) || defined(CURSES_GRAPHICS) || defined(SHIM_GRAPHICS) \
++    || defined(DUMPLOG) || defined(CURSES_GRAPHICS) || defined(LISP_GRAPHICS) || defined(SHIM_GRAPHICS) \
+     || defined(AMII_GRAPHICS)
  #define TEXT_TOMBSTONE
  #endif
- #if defined(mac) || defined(__BEOS__)
 --- NetHack-NetHack-3.7.0_WIP/src/windows.c	2025-08-24 10:26:20.500371140 -0500
 +++ nethack/src/windows.c	2025-08-24 10:32:05.578014465 -0500
 @@ -42,6 +42,10 @@
@@ -261,7 +249,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
 --- NetHack-NetHack-3.7.0_WIP/src/mail.c	2025-08-24 11:44:27.222072179 -0500
 +++ nethack/src/mail.c	2025-08-24 11:44:35.251959507 -0500
-@@ -701,7 +701,7 @@
+@@ -717,7 +717,7 @@
      if (!(mr = nh_getenv("MAILREADER")))
          mr = DEF_MAILREADER;
  
@@ -272,7 +260,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      }
 --- NetHack-NetHack-3.7.0_WIP/src/cmd.c	2025-08-28 11:08:57.181900595 -0500
 +++ nethack/src/cmd.c	2025-08-28 11:08:41.499298196 -0500
-@@ -1841,7 +1841,7 @@
+@@ -1860,7 +1860,7 @@
      { '!',    "shell",
                "leave game to enter a sub-shell ('exit' to come back)",
                dosh_core, (IFBURIED | GENERALCMD | NOFUZZERCMD
@@ -318,7 +306,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  # all windowing-system-dependent .cpp (for dependencies and such)
  WINCXXSRC = $(WINQTSRC) $(WINQT3SRC) $(WINBESRC)
  
-@@ -1275,7 +1282,7 @@
+@@ -1279,7 +1286,7 @@
  $(TARGETPFX)weapon.o: weapon.c $(HACK_H)
  $(TARGETPFX)were.o: were.c $(HACK_H)
  $(TARGETPFX)wield.o: wield.c $(HACK_H)
@@ -327,7 +315,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  $(TARGETPFX)wizard.o: wizard.c $(HACK_H)
  $(TARGETPFX)wizcmds.o: wizcmds.c $(HACK_H) ../include/func_tab.h
  $(TARGETPFX)worm.o: worm.c $(HACK_H)
-@@ -1304,6 +1311,9 @@
+@@ -1308,6 +1315,9 @@
  	$(MOCPATH) -o $@ ../win/Qt/qt_xcmd.h
  qt_yndlg.moc: $(QTn_H) ../win/Qt/qt_yndlg.h
  	$(MOCPATH) -o $@ ../win/Qt/qt_yndlg.h
@@ -800,7 +788,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  MSWIN   =../win/win32
  WCHAIN  =../win/chain
  WCURSES =../win/curses
-@@ -365,7 +367,7 @@
+@@ -378,7 +380,7 @@
  CONSOLEDEF = $(COMMONDEF) -D_CONSOLE
  
  # To build util targets
@@ -809,23 +797,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  
  LIBS = -lcomctl32 -lgdi32 -lole32 -lshell32 -luserenv -luuid -lwinmm \
         -lrpcrt4 -lbcrypt $(LIBUCRT)
-@@ -1215,7 +1217,7 @@
- 	   getpos glyphs hack insight invent isaac64 light lock \
+@@ -1236,7 +1238,7 @@
+ 	   getpos glyphs hack iactions insight invent isaac64 light lock \
  	   mail makemon mcastu mdlib mhitm mhitu minion mklev mkmap mkmaze mkobj mkroom \
  	   mon mondata monmove monst mplayer mthrowu muse music \
 -	   nhlobj nhlsel nhlua windsound o_init objects objnam options \
 +	   nhlobj nhlsel nhlua o_init objects objnam options \
  	   pager pickup pline polyself potion pray priest quest questpgr \
  	   random read rect region report restore rip rnd role rumors \
- 	   safeproc save sfbase sfstruct shk shknam sit selvar sounds sp_lev \
-@@ -1327,19 +1329,20 @@
+ 	   save sfbase sfstruct shk shknam sit selvar sounds sp_lev \
+@@ -1348,19 +1350,20 @@
  #==========================================
  # nethack
  #==========================================
--CFLAGSNH = $(CFLAGSU) $(CFLAGSXTRA) $(SOUNDLIBINCL) -DNO_TILE_C -DSAFEPROCS -D_LIB -DWIN32CON $(SOUNDLIBDEFS)
--CPPFLAGSNH = $(CFLAGSU) $(CPPFLAGSXTRA) -DNO_TILE_C -DSAFEPROCS -D_LIB -DWIN32CON $(SOUNDLIBDEFS)
-+CFLAGSNH = $(CFLAGSU) $(CFLAGSXTRA) $(SOUNDLIBINCL) -DTILES -DSAFEPROCS -D_LIB -DNOTTYGRAPHICS -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
-+CPPFLAGSNH = $(CFLAGSU) $(CPPFLAGSXTRA) -DTILES -DSAFEPROCS -D_LIB -DNOTTYGRAPHICS -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
+-CFLAGSNH = $(CFLAGSU) $(CFLAGSXTRA) $(SOUNDLIBINCL) -DNO_TILE_C -D_LIB -DWIN32CON $(SOUNDLIBDEFS)
+-CPPFLAGSNH = $(CFLAGSU) $(CPPFLAGSXTRA) -DNO_TILE_C -D_LIB -DWIN32CON $(SOUNDLIBDEFS)
++CFLAGSNH = $(CFLAGSU) $(CFLAGSXTRA) $(SOUNDLIBINCL) -DTILES -D_LIB -DNOTTYGRAPHICS -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
++CPPFLAGSNH = $(CFLAGSU) $(CPPFLAGSXTRA) -DTILES -D_LIB -DNOTTYGRAPHICS -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
  
  ONH = $(O)nethack
  
@@ -843,7 +831,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  
  NHOBJS = $(addprefix $(ONH)/, $(COREOBJS) $(NHONLY))
  NHRES = $(ONH)/conres.o
-@@ -1347,11 +1350,11 @@
+@@ -1368,11 +1371,11 @@
  
  nethack: $(NHTARGET)
  
@@ -857,7 +845,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  	$(cc) $(CFLAGSNH) $< -o$@
  
  #==========================================
-@@ -1420,6 +1423,9 @@
+@@ -1450,6 +1453,9 @@
  $(ONH)/%.o: $(TTY)/%.c $(NHLUAH) | $(ONH)
  	$(cc) $(CFLAGSNH) $< -o$@
  
@@ -869,14 +857,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  
 --- NetHack-NetHack-3.7.0_WIP/sys/windows/windmain.c	2025-09-01 18:37:38.101776324 -0500
 +++ nethack/sys/windows/windmain.c	2025-08-31 19:05:58.182621905 -0500
-@@ -69,11 +69,15 @@
- #ifdef WIN32CON
- extern int windows_console_custom_nhgetch(void);
- void safe_routines(void);
-+#ifdef TTY_GRAPHICS
- int tty_self_recover_prompt(void);
- #endif
-+#endif
+@@ -68,6 +68,8 @@
  
  int other_self_recover_prompt(void);
  
@@ -885,7 +866,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  char orgdir[PATHLEN];
  boolean getreturn_enabled;
  int windows_startup_state = 0;    /* we flag whether to continue with this */
-@@ -87,6 +91,8 @@
+@@ -81,6 +83,8 @@
              "mswin";
  #elif defined(TTY_GRAPHICS)
              "tty";
@@ -894,40 +875,38 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
  #ifdef WANT_GETHDATE
  static struct stat hbuf;
-@@ -282,11 +288,13 @@
-     if (!iflags.windowtype_locked) {
- #if defined(TTY_GRAPHICS)
-         Strcpy(default_window_sys, "tty");
-+#elif defined(LISP_GRAPHICS)
-+        Strcpy(default_window_sys, "lisp");
- #else
- #if defined(CURSES_GRAPHICS) && !defined(MSWIN_GRAPHICS)
-         Strcpy(default_window_sys, "curses");
- #endif /* CURSES */
--#endif /* TTY */
-+#endif /* TTY/LISP */
-         if (iflags.windowtype_deferred && gc.chosen_windowtype[0])
-             windowtype = gc.chosen_windowtype;
-     }
-@@ -304,7 +312,7 @@
-     iflags.use_background_glyph = FALSE;
-     if (WINDOWPORT(mswin))
-         iflags.use_background_glyph = TRUE;
--#ifdef WIN32CON
-+#if defined(WIN32CON) && defined(TTY_GRAPHICS)
-     if (WINDOWPORT(tty))
-         consoletty_open(1);
- #endif
-@@ -314,7 +322,7 @@
+@@ -216,7 +220,7 @@
+     //       windowtype = gc.chosen_windowtype;
+     //   windowtype = gc.chosen_windowtype;
  
-     init_nhwindows(&argc, argv);
+-#if !defined(MSWIN_GRAPHICS)
++#if defined(WIN32CON) && defined(TTY_GRAPHICS)
+     nethack_enter_consoletty();
+     consoletty_open(1);
+ #endif
+@@ -231,8 +235,12 @@
+ #ifdef MSWIN_GRAPHICS
+         windowtype = "mswin";
+ #else
++#ifdef LISP_GRAPHICS
++        windowtype = "lisp";
++#else
+         windowtype = "tty";
+ #endif
++#endif
+     }
+     choose_windows(
+         windowtype); /* sets all the window port function pointers */
+@@ -332,7 +340,7 @@
+ 
+ //    init_nhwindows(&argc, argv);
  
 -#ifdef WIN32CON
 +#if defined(WIN32CON) && defined(TTY_GRAPHICS)
      if (WINDOWPORT(tty))
          toggle_mouse_support();
  #endif
-@@ -1047,7 +1055,7 @@
+@@ -1053,7 +1061,7 @@
  
      (void) nhclose(fd);
  
@@ -936,7 +915,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      if (WINDOWPORT(tty))
          prompt_result = tty_self_recover_prompt();
      else
-@@ -1064,7 +1072,7 @@
+@@ -1070,7 +1078,7 @@
                      : (prompt_result == 1)
                          ? "recover the old game"
                          : "not start a new game");
@@ -945,7 +924,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      if (istty)
          term_clear_screen();
  #endif
-@@ -1085,7 +1093,7 @@
+@@ -1091,7 +1099,7 @@
          }
      } else if (prompt_result < 0) {    /* destroy old game */
          if (eraseoldlocks()) {
@@ -954,7 +933,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              if (istty)
                  term_clear_screen(); /* display gets fouled up otherwise */
  #endif
-@@ -1164,7 +1172,7 @@
+@@ -1170,7 +1178,7 @@
      return FALSE;
  }
  
@@ -963,7 +942,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  /*
   * returns:
   *     1 if game should be recovered
-@@ -1243,6 +1251,7 @@
+@@ -1247,6 +1255,7 @@
  {
      int c, ci, ct, pl, retval = 0;
      boolean ismswin = WINDOWPORT(mswin),
@@ -971,7 +950,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              iscurses = WINDOWPORT(curses);
  
      pl = 1;
-@@ -1260,7 +1269,7 @@
+@@ -1264,7 +1273,7 @@
  
   other_ask_again:
  
@@ -980,7 +959,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          while ((ci = nhgetch()) && !(ci == '\n' || ci == 13)) {
              if (ct > 0) {
                  /* invalid answer */
-@@ -1279,7 +1288,7 @@
+@@ -1283,7 +1292,7 @@
          c = y_n("Are you sure you wish to destroy the old game, rather than try to "
                    "recover it? [yn] ");
          pl = 2;
@@ -991,7 +970,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              goto other_ask_again;
 --- NetHack-NetHack-3.7.0_WIP/sys/windows/windsys.c	2025-09-02 16:55:09.027193190 -0500
 +++ nethack/sys/windows/windsys.c	2025-09-02 20:02:32.960712885 -0500
-@@ -256,13 +256,15 @@
+@@ -255,13 +255,15 @@
  #ifdef TTY_GRAPHICS
      if (iflags.window_inited)
          term_end_screen();
@@ -1009,7 +988,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (void) vsnprintf(buf, sizeof buf - sizeof "\n", s, VA_ARGS);
          Strcat(buf, "\n");
          raw_printf("%s",buf);
-@@ -357,8 +359,10 @@
+@@ -352,8 +354,10 @@
  void
  interject(int interjection_type)
  {
@@ -1020,35 +999,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  }
  
  #ifdef RUNTIME_PASTEBUF_SUPPORT
-@@ -580,7 +584,7 @@
-    initializing the window port */
- void nethack_enter_windows(void)
- {
--#ifdef WIN32CON
-+#if defined(WIN32CON) && defined(TTY_GRAPHICS)
-     if (WINDOWPORT(tty))
-         nethack_enter_consoletty();
- #endif
---- NetHack-NetHack-3.7.0_WIP/win/share/safeproc.c	2025-09-02 16:55:09.047228369 -0500
-+++ nethack/win/share/safeproc.c	2025-09-02 20:02:32.960803969 -0500
-@@ -498,7 +498,7 @@
-     return;
- }
- 
--#ifdef WIN32CON
-+#if defined(WIN32CON) && defined(TTY_GRAPHICS)
- extern win_request_info *tty_ctrl_nhwindow(winid window UNUSED,
-                                           int request UNUSED,
-                                           win_request_info *wri UNUSED);
-@@ -510,7 +510,7 @@
-     int request UNUSED,
-     win_request_info *wri UNUSED)
- {
--#ifdef WIN32CON
-+#if defined(WIN32CON) && defined(TTY_GRAPHICS)
-     return (*tty_ctrl_nhwindow)(window, request, wri);
- #else
-     return (win_request_info *) 0;
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
 @@ -0,0 +1,589 @@
