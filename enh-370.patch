@@ -675,7 +675,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #ifdef RUNTIME_PASTEBUF_SUPPORT
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,589 @@
+@@ -0,0 +1,595 @@
++2026-04-02  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_init_nhwindows): Print a header so clients can
++	filter out any noise (e.g. config errors printed without
++	lisp_rawprint) from before the lisp window port is initialized.
++
 +2025-10-11  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_display_file): Fix double free.
@@ -1267,7 +1273,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	function.
 --- /dev/null	2025-08-24 10:32:36.147906000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
-@@ -0,0 +1,1758 @@
+@@ -0,0 +1,1760 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -2772,6 +2778,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +    char verbuf[BUFSZ];
 +    char *need_options_file_p;
 +    int i;
++
++    printf("\n;; START LISP\n");
 +
 +    lisp_cmd("need-options-file", );
 +    read_string("string", &need_options_file_p);

@@ -757,7 +757,7 @@ Assumes nethack is not already running."
     (setq nethack-lisprec--timer nil)
     (setq nethack-start-time (current-time))
     (nethack-reset-status-variables)
-    (set-process-filter nethack-proc #'nethack-filter)
+    (set-process-filter nethack-proc #'nethack--prefilter)
     (set-process-sentinel nethack-proc #'nethack-sentinel)))
 
 (defvar nethack-use-tiles--tileset nil)
@@ -874,6 +874,21 @@ PROC is the process object and MSG is the exit message."
     (when print-timestamp
       (insert (format " ; %s" (time-subtract (current-time) nethack-start-time))))
     (insert "\n")))
+
+(defconst nethack--lisp-header "^;; START LISP$")
+(defun nethack--prefilter (proc string)
+  (with-current-buffer (process-buffer proc)
+    (goto-char (point-max))
+    (insert string)
+    (goto-char (point-max))
+    (when (search-backward-regexp nethack--lisp-header nil t)
+      (let ((prev-output (buffer-substring-no-properties (point-min) (point)))
+            (output (buffer-substring-no-properties (point) (point-max))))
+        (when (not (string-match-p "\\`\\s-*\\'" prev-output))
+          (nethack-nhapi-raw-print prev-output))
+        (erase-buffer)
+        (set-process-filter proc #'nethack-filter)
+        (nethack-filter proc output)))))
 
 (defvar nethack-at-prompt nil)
 (defvar nethack-at-prompt-hook nil

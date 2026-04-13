@@ -270,7 +270,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-03-31 01:40:08.895891095 -0500
-@@ -0,0 +1,556 @@
+@@ -0,0 +1,562 @@
++2026-04-02  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_init_nhwindows): Print a header so clients can
++	filter out any noise (e.g. config errors printed without
++	lisp_rawprint) from before the lisp window port is initialized.
++
 +2025-10-11  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_display_file): Fix double free.
@@ -829,7 +835,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	function.
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-03-31 01:40:08.897561983 -0500
-@@ -0,0 +1,1745 @@
+@@ -0,0 +1,1747 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -2330,6 +2336,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +    char verbuf[BUFSZ];
 +    char *need_options_file_p;
 +    int i;
++
++    printf("\n;; START LISP\n");
 +
 +    lisp_cmd("need-options-file", );
 +    read_string("string", &need_options_file_p);
