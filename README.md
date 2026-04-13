@@ -147,16 +147,15 @@ These instructions are known to work on \*NIX systems and have been lightly test
 
   * This may be as simple as running `sys/unix/setup.sh` to copy the Makefiles.
 
-  * For the 3.6.7/3.7.0 patch, included is a hints file under
-    `sys/unix/hints/lisp` based on the default Linux one, which builds
-    into wherever the `PREFIX` environment variable points to at runtime.  You
-    may want to edit the `lisp` hints file before running something along
-    the lines of:
+  * The 3.6.7/3.7.0 patch includes modifications to the default Linux
+    hints file for enabling the lisp window port (this should also
+    work on macOS); you can inspect and modify this file to e.g. add
+    additional compile flags.
 
     ```
     $ cd sys/unix
-    $ vi hints/lisp
-    $ sh setup.sh hints/lisp
+    $ vi hints/linux # or hints/linux.370
+    $ sh setup.sh hints/linux
     ```
 
 * Compile (from the toplevel)
@@ -165,9 +164,14 @@ These instructions are known to work on \*NIX systems and have been lightly test
 
     ```
     $ cd ../..
-    $ make all
+    $ make all WANT_WIN_LISP=1
     $ make install
     ```
+    
+> [!IMPORTANT]
+> **If you are using 3.7.0 on Linux or macOS, you must pass `WANT_WIN_LISP=1` to Make in order to build the lisp port.**
+> The 3.6.7 build system defaults to building the lisp port automatically, and for Windows the patched 3.7.0 GNUmakefile can _only_ build the lisp port.
+> See [`nethack-build-compile`](./nethack.el) for more details.
 
 * Install the Elisp sources
 

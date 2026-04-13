@@ -160,15 +160,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #ifdef SHIM_GRAPHICS
      { "shim", "NetHack Library Windowing Shim", TRUE },
  #endif
-@@ -304,6 +307,12 @@
+@@ -304,6 +307,9 @@
  #if (NH_DEVEL_STATUS != NH_STATUS_RELEASED)
      Sprintf(eos(outbuf), "-%d", EDITLEVEL);
  #endif
 +#ifdef LISP_GRAPHICS
-+    Sprintf(eos(outbuf), " lisp-patch");
-+#endif
-+#ifdef LISP_VERSION
-+    Sprintf(eos(outbuf), " %s", LISP_VERSION);
++    Sprintf(eos(outbuf), " lisp-patch %s", LISP_VERSION);
 +#endif
      return outbuf;
  }
@@ -327,416 +324,91 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  # DEPENDENCIES MUST END AT END OF FILE
  # IF YOU PUT STUFF HERE IT WILL GO AWAY
  # see make depend above
---- /dev/null	2025-08-24 15:06:43.804608000 -0500
-+++ nethack/sys/unix/hints/lisp	2025-08-24 15:06:10.501580150 -0500
-@@ -0,0 +1,407 @@
-+# NetHack 3.7  unix-lisp.370 $NHDT-Date: 1693519390 2025/08/19 18:30:00 $  $NHDT-Branch: keni-crashweb2 $:$NHDT-Revision: 1.61 $
-+# Copyright (c) Kenneth Lorber, Kensington, Maryland, 2007.
-+# NetHack may be freely redistributed.  See license for details.
-+#
-+#---------------------------------------------------------------------
-+# Lisp hints file
-+# Tested on:
-+#     - macOS Sequoia (with Nix)
-+#
-+# If this doesn't work for your distribution, consider making a new
-+# hints file for it, rather than changing this one.
-+# And let us know about it.
-+#
-+
-+#-PRE
-+
+--- NetHack-NetHack-3.7.0_WIP/sys/unix/hints/include/multiw-1.370	2026-04-13 10:16:58.322021563 -0500
++++ nethack/sys/unix/hints/include/multiw-1.370	2026-04-13 10:49:15.754660992 -0500
+@@ -7,15 +7,17 @@
+ # on the 'make' command line.  If none are enabled, tty will be used.
+ #WANT_WIN_TTY=1
+ #WANT_WIN_CURSES=1
++#WANT_WIN_LISP=1
+ #WANT_WIN_X11=1
+ #WANT_WIN_QT=1
+ 
+ # 2. What is the default window system?
+ # Exactly one of these can be manually uncommented and/or can be specified
+ # on the 'make' command line.  If none is enabled, the first among
+-# WANT_WIN_{tty,curses,X11,Qt} that is enabled will become default.
++# WANT_WIN_{tty,curses,lisp,X11,Qt} that is enabled will become default.
+ #WANT_DEFAULT=tty
+ #WANT_DEFAULT=curses
++#WANT_DEFAULT=lisp
+ #WANT_DEFAULT=Qt
+ #WANT_DEFAULT=X11
+ 
+--- NetHack-NetHack-3.7.0_WIP/sys/unix/hints/include/multiw-2.370	2026-04-13 10:16:58.322106605 -0500
++++ nethack/sys/unix/hints/include/multiw-2.370	2026-04-13 10:49:15.754963619 -0500
+@@ -32,6 +32,7 @@
+ ifdef WANT_WIN_ALL
+ WANT_WIN_TTY=1
+ WANT_WIN_CURSES=1
++WANT_WIN_LISP=1
+ WANT_WIN_X11=1
+ WANT_WIN_QT=1
+ else
+@@ -40,12 +41,14 @@
+ ifndef  WANT_WIN_CURSES
+ ifndef   WANT_WIN_X11
+ ifndef    WANT_WIN_QT
++ifndef     WANT_WIN_LISP
+ WANT_WIN_TTY=1
+ endif
+ endif
+ endif
+ endif
+ endif
++endif
+ 
+ ifdef WANT_LIBNH
+ WANT_DEFAULT=shim
+@@ -55,13 +58,16 @@
+ # sanity for something like 'make WANT_WIN_CURSES=1 WANT_DEFAULT=X11' but
+ # 'makedefs -v' would notice, complain, and quit causing 'make' to quit.
+ ifndef WANT_DEFAULT
+-# pick the first one enabled among { tty, curses, X11, Qt }
++# pick the first one enabled among { tty, curses, lisp, X11, Qt }
+ ifdef WANT_WIN_TTY
+ WANT_DEFAULT=tty
+ else
+ ifdef  WANT_WIN_CURSES
+ WANT_DEFAULT=curses
+ else
++ifdef  WANT_WIN_LISP
 +WANT_DEFAULT=lisp
-+
-+HINTSVERSION := 370
-+
-+ifdef MAKEFILE_TOP
-+ifeq ($(MAKELEVEL),0)
-+PRECHECK+=checkmakefiles
-+# all files included from this hints file get listed
-+# in HINTSINCLNAMES (without suffix and without a path)
-+HINTSINCLNAMES := compiler cross-pre1 cross-pre2 cross-post \
-+		gbdates-pre gbdates-post \
-+		multiw-1 multiw-2 misc \
-+		multisnd1-pre multisnd2-pre multisnd-post
-+HINTSINCLFILES := $(addsuffix .$(HINTSVERSION), $(HINTSINCLNAMES))
-+endif
-+endif
-+
-+#4. Other
-+GAMEUID  = $(USER)
-+GAMEGRP  = games
-+
-+# This gives better backtraces by making all core functions global; this
-+# works around a limitation in glibc's backtrace(3) function.
-+# This will be turned on automatically with CRASHREPROT.
-+# 1 to enable, 0 to disable
-+USE_NOSTATICFN = 1
-+# If you want CRASHREPORT but absolutely don't want NOSTATICFN, define this:
-+#USE_NONOSTATICFN = 1
-+
-+#-----------------------------------------------------------------------------
-+#-INCLUDE cross-pre1.370
-+
-+
-+#-----------------------------------------------------------------------------
-+# You shouldn't need to change anything below here (in the hints file; if
-+# you're reading this in Makefile augmented by hints, that may not be true).
-+#
-+
-+ifeq "$(GIT)" "1"
-+ifndef GITSUBMODULES
-+GITSUBMODULES=1
-+endif
-+endif
-+
-+ifeq "$(CPPREGEX)" "1"
-+REGEXOBJ=$(TARGETPFX)cppregex.o
-+ifndef CPLUSPLUS_NEEDED
-+CPLUSPLUS_NEEDED = 1
-+endif
-+endif
-+
-+ifeq "$(cppregex)" "1"
-+REGEXOBJ=$(TARGETPFX)cppregex.o
-+ifndef CPLUSPLUS_NEEDED
-+CPLUSPLUS_NEEDED = 1
-+endif
-+endif
-+
-+ifeq "$(musl)" "1"
-+MUSL=1
-+endif
-+ifeq "$(MUSL)" "1"
-+ifneq "$(NOCRASHREPORT)" "1"
-+NOCRASHREPORT=1
-+endif
-+WINCFLAGS += -DMUSL_LIBC
-+# use this instead of col -bx
-+COLCMD=../util/stripbs
-+STRIPBS=../util/stripbs
 +else
-+WINCFLAGS += -DGNU_LIBC
+ ifdef   WANT_WIN_X11
+ WANT_DEFAULT=X11
+ else
+@@ -74,6 +80,7 @@
+ endif
+ endif
+ endif
 +endif
-+
-+ifeq "$(NOCRASHREPORT)" "1"
-+WINCFLAGS += -DNOCRASHREPORT
-+endif
-+
-+# compiler.370 contains compiler detection and adjustments common
-+# to both linux and macOS
-+
-+#-INCLUDE compiler.370
-+
-+# misc.370 must come after compiler.370
-+# and after QTDIR is defined.
-+#
-+#-INCLUDE misc.370
-+
-+ifeq "$(USE_ASAN)" "1"
-+CFLAGS+=-fsanitize=address
-+LFLAGS+=-fsanitize=address
-+endif
-+
-+ifeq "$(USE_UBSAN)" "1"
-+CFLAGS+=-fsanitize=undefined
-+LFLAGS+=-fsanitize=undefined
-+endif
-+
-+ifeq "$(USE_CURSESLIB)" "1"
-+# default
-+CURSESLIB = -lncurses -ltinfo
-+# If CURSES_UNICODE is defined, we need ncursesw.
-+# Without CURSES_UNICODE the following simpler setting works.
-+# CURSESLIB = -lncurses -ltinfo
-+ifdef MAKEFILE_SRC
-+comma:=,
-+NCURSES_LFLAGS = $(shell pkg-config ncursesw --libs)
-+NCURSES_CFLAGS = $(shell pkg-config ncursesw --cflags)
-+ifeq (,$(findstring ncursesw, $(NCURSES_LFLAGS)))
-+ifeq (,$(findstring ncurses, $(NCURSES_LFLAGS)))
-+#this indicates that pkg-config itself was unavailable
-+NCURSES_LFLAGS = -lncursesw -ltinfo
-+endif
-+endif
-+#$(info $(NCURSES_LFLAGS))
-+ifeq (,$(findstring ncursesw, $(NCURSES_LFLAGS)))
-+HAVE_NCURSESW=0
-+else
-+HAVE_NCURSESW=1
-+endif
-+#$(info $(NCURSES_LFLAGS))
-+#$(info HAVE_NCURSESW=$(HAVE_NCURSESW))
-+ifeq "$(HAVE_NCURSESW)" "1"
-+# remove unnecessary -Wl,-Bsymbolic-functions if present
-+ifneq (,$(findstring -Wl$(comma)-Bsymbolic-functions, $(NCURSES_LFLAGS)))
-+CURSESLIB = $(subst -Wl$(comma)-Bsymbolic-functions,,$(NCURSES_LFLAGS))
-+else
-+CURSESLIB = $(NCURSES_LFLAGS)
-+endif
-+endif      #HAVE_NCURSESW
-+#$(info $(CURSESLIB))
-+ifeq (,$(findstring ncursesw, $(NCURSES_LFLAGS)))
-+ifeq (,$(findstring ncurses, $(NCURSES_LFLAGS)))
-+#this indicates that pkg-config itself was unavailable
-+NOPKGCONFIG = 1
-+endif      #ncurses not in NCURSES_LFLAGS?
-+endif      #ncursesw not in NCURSES_LFLAGS?
-+#
-+ifeq "$(NOPKGCONFIG)" "1"
-+NCURSES_CFLAGS = -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
-+ifeq "$(HAVE_NCURSESW)" "1"
-+ifeq (,$(wildcard /usr/include/ncursesw/curses.h))
-+NCURSES_CFLAGS += -I/usr/include
-+else
-+NCURSES_CFLAGS += -I/usr/include/ncursesw
-+endif
-+NCURSES_LFLAGS = -lncursesw -ltinfo
-+else       #HAVE_NCURSESW
-+ifeq (,$(wildcard /usr/include/ncurses/curses.h))
-+NCURSES_CFLAGS += -I/usr/include
-+else
-+NCURSES_CFLAGS += -I/usr/include/ncurses
-+endif
-+NCURSES_LFLAGS = -lncurses -ltinfo
-+endif      #HAVE_NCURSESW
-+endif      #NOPKGCONFIG
-+endif      #MAKEFILE_SRC
-+endif      #USE_CURSESLIB
-+
-+# NetHack sources control
-+NHCFLAGS+=-DDLB
-+NHCFLAGS+=-DHACKDIR=\"$(HACKDIR)\"
-+NHCFLAGS+=-DDEFAULT_WINDOW_SYS=\"$(WANT_DEFAULT)\"
-+NHCFLAGS+=-DNOTTYGRAPHICS -DLISP_GRAPHICS
-+NHCFLAGS+=-DSYSCF -DSYSCF_FILE=\"$(HACKDIR)/sysconf\" -DSECURE
-+NHCFLAGS+=-DTIMED_DELAY
-+NHCFLAGS+=-DDUMPLOG
-+NHCFLAGS+=-DCONFIG_ERROR_SECURE=FALSE
-+NHCFLAGS+=-DGREPPATH=\"/usr/bin/grep\"
-+NHCFLAGS+=-DCOMPRESS=\"/bin/gzip\" -DCOMPRESS_EXTENSION=\".gz\"
-+#NHCFLAGS+=-DNOMAIL
-+#NHCFLAGS+=-DEXTRA_SANITY_CHECKS
-+#NHCFLAGS+=-DEDIT_GETLIN
-+#NHCFLAGS+=-DSCORE_ON_BOTL
-+#NHCFLAGS+=-DMSGHANDLER
-+#NHCFLAGS+=-DTTY_TILES_ESCCODES
-+#NHCFLAGS+=-DTTY_SOUND_ESCCODES
-+#NHCFLAGS+=-DNO_CHRONICLE
-+#NHCFLAGS+=-DLIVELOG
-+#NHCFLAGS+=-DCHANGE_COLOR
-+NHCFLAGS+=-DSELF_RECOVER
-+ifdef WANT_WIN_CURSES
-+NHCFLAGS+=$(NCURSES_CFLAGS)
-+ifeq "$(HAVE_NCURSESW)" "1"
-+NHCFLAGS+=-DCURSES_UNICODE
-+else
-+ifdef MAKEFILE_SRC
-+$(info Attention: CURSES_UNICODE is not being defined without ncursesw)
-+endif   #MAKEFILE_SRC
-+endif   #HAVE_NCURSESW
-+endif   #WANT_WIN_CURSES
-+
-+
+ 
+ WINCFLAGS=
+ WINSRC =
+@@ -100,6 +107,12 @@
+ WINOBJ0 += $(WINCURSESOBJ)
+ endif
+ 
++ifdef WANT_WIN_LISP
++WINCFLAGS += -DLISP_GRAPHICS
 +WINSRC += $(WINLISPSRC)
 +WINOBJ0 += $(WINLISPOBJ)
-+WINLIB += $(WINLISPLIB)
-+XTRASRC += tile.c
-+XTRAOBJ += $(TARGETPFX)tile.o
-+
-+ifeq "$(CCISCLANG)" "1"
-+# clang-specific starts
-+# clang-specific ends
-+else
-+# gcc-specific starts
-+# LIBCFLAGS+=-DSIG_RET_TYPE=__sighandler_t
-+# gcc-specific ends
 +endif
 +
-+# WINCFLAGS set from multiw-2.370
-+# SNDCFLAGS set from multisnd-pre.370
-+CFLAGS+= $(WINCFLAGS)
-+CFLAGS+= $(SNDCFLAGS)
-+CFLAGS+= $(NHCFLAGS)
-+CFLAGS+= $(LIBCFLAGS)
-+
-+# WINCFLAGS set from multiw-2.370
-+# SNDCFLAGS set from multisnd-pre.370
-+CCXXFLAGS+= $(WINCFLAGS)
-+CCXXFLAGS+= $(SNDCFLAGS)
-+CCXXFLAGS+= $(NHCFLAGS)
-+CCXXFLAGS+= $(LIBCFLAGS)
-+
-+VARDATND =
-+VARDATND0 =
-+
-+#ifdef WANT_WIN_CHAIN
-+#HINTSRC=$(CHAINSRC)
-+#HINTOBJ=$(CHAINOBJ)
-+#endif # WANT_WIN_CHAIN
-+
-+ifdef MAKEFILE_SRC
-+ifdef CURSESLIB
-+WINLIB += $(CURSESLIB)
-+endif   #CURSESLIB
-+endif   #MAKEFILE_SRC
-+
-+LINK = $(CC)
-+
-+# prevent duplicate tile.o in WINOBJ
-+WINOBJ = $(WINOBJ0) $(sort $(XTRAOBJ))
-+# prevent duplicates in VARDATND if both X11 and Qt are being supported
-+VARDATND += $(sort $(VARDATND0))
-+
-+GIT_HASH := $(shell echo `git rev-parse --verify HEAD` 2>&1)
-+GIT_BRANCH := $(shell echo `git rev-parse --abbrev-ref HEAD` 2>&1)
-+GIT_PREFIX := $(shell echo `git config nethack.substprefix` 2>&1)
-+
-+ifdef GIT_HASH
-+GITHASH = -DNETHACK_GIT_SHA=\"$(GIT_HASH)\"
-+endif
-+ifdef GIT_BRANCH
-+GITBRANCH = -DNETHACK_GIT_BRANCH=\"$(GIT_BRANCH)\"
-+endif
-+ifdef GIT_PREFIX
-+GITPREFIX = -DNETHACK_GIT_PREFIX=\"$(GIT_PREFIX)\"
-+endif
-+
-+ifdef WANT_LIBNH
-+CFLAGS += -DSHIM_GRAPHICS -DNOTTYGRAPHICS -DNOSHELL -DLIBNH -fpic
-+LIBNHSYSSRC = ../sys/libnh/libnhmain.c \
-+		../sys/share/ioctl.c ../sys/share/unixtty.c \
-+		../sys/unix/unixunix.c ../sys/unix/unixres.c \
-+		../win/shim/winshim.c
-+LIBNHSYSOBJ = $(TARGETPFX)libnhmain.o $(TARGETPFX)ioctl.o \
-+		$(TARGETPFX)unixtty.o $(TARGETPFX)unixunix.o \
-+		$(TARGETPFX)unixres.o $(TARGETPFX)winshim.o \
-+		$(TARGETPFX)date.o
-+#don't bother building the game executable as it will fail
-+#without winshim
-+override GAME=
-+MOREALL += ( cd src ; $(MAKE) pregame ; $(MAKE) $(TARGETPFX)libnh.a )
-+endif  # WANT_LIBNH
-+
-+SYSCONFCREATE = cp sys/unix/sysconf $(INSTDIR)/sysconf
-+SYSCONFINSTALL = $(SYSCONFCREATE) && \
-+	 $(CHOWN) $(GAMEUID) $(INSTDIR)/sysconf && \
-+	 $(CHGRP) $(GAMEGRP) $(INSTDIR)/sysconf && \
-+	 chmod $(VARFILEPERM) $(INSTDIR)/sysconf;
-+SYSCONFENSURE = (if ! test -f $(INSTDIR)/sysconf ; then \
-+	 $(SYSCONFCREATE) && \
-+	 $(CHOWN) $(GAMEUID) $(INSTDIR)/sysconf && \
-+	 $(CHGRP) $(GAMEGRP) $(INSTDIR)/sysconf && \
-+	 chmod $(VARFILEPERM) $(INSTDIR)/sysconf; fi );
-+
-+ifdef WANT_SOURCE_INSTALL
-+PREFIX=$(abspath $(NHSROOT))
-+#SHELLDIR=
-+HACKDIR=$(PREFIX)/playground
-+GAMEPERM = 0700
-+VARFILEPERM = 0600
-+VARDIRPERM = 0700
-+CFLAGS+=-DSYSCF -DSYSCF_FILE=\"$(HACKDIR)/sysconf\" -DSECURE
-+MOREALL=$(MAKE) install
-+else #!WANT_SOURCE_INSTALL
-+#PREFIX=/usr
-+PREFIX=$(wildcard ~)/nh/install
-+HACKDIR=$(PREFIX)/games/lib/nethackdir
-+SHELLDIR = $(PREFIX)/games
-+VARDIRPERM = 0755
-+VARFILEPERM = 0600
-+GAMEPERM = 0755
-+endif #?WANT_SOURCE_INSTALL
-+
-+INSTDIR=$(HACKDIR)
-+VARDIR = $(HACKDIR)
-+
-+ifneq "$(CCISCLANG)" ""
-+# gdb may not be installed if clang is chosen compiler so the game
-+# won't start in that case due to a sysconf error. Comment out
-+# relevant lines in sysconf.
-+POSTINSTALL+= sed -i -e 's;^GDBPATH=/usr/bin/gdb;\#GDBPATH=/usr/bin/gdb;' \
-+		-e 's;PANICTRACE_GDB=1;PANICTRACE_GDB=0;' $(INSTDIR)/sysconf;
-+endif
-+
-+ifeq '$(USE_NONOSTATICFN)' '1'
-+CFLAGS += -DNONOSTATICFN
-+else
-+ifeq '$(USE_NOSTATICFN)' '1'
-+CFLAGS += -DNOSTATICFN
-+endif
-+endif
-+
-+# Lua
-+# when building liblua.a, avoid warning that use of tmpnam() should be
-+# replaced by mkstemp(); the lua code doesn't use nethack's config.h so
-+# this needs to be passed via make rather than defined in unixconf.h
-+SYSCFLAGS=-DLUA_USE_LINUX
-+ifdef GITSUBMODULES
-+LUAFLAGS=CC='$(CC)' SYSCFLAGS='$(SYSCFLAGS)'
-+ifneq "$(CCISCLANG)" ""
-+# clang
-+LUAFLAGS +=CWARNGCC=''
-+endif   # clang
-+override LUAHEADERS = submodules/lua
-+override LUA2NHTOP = ../..
-+override LUAMAKEFLAGS=$(LUAFLAGS)
-+endif   # GITSUBMODULES
-+DLLIB = -ldl
-+
-+# Only needed for GLIBC stack trace:
-+LFLAGS+=-rdynamic
-+
-+# if TTY_TILES_ESCCODES
-+#WINSRC += tile.c
-+#WINOBJ += tile.o
-+# endif
-+
-+CHOWN=true
-+CHGRP=true
-+
-+# manpages directory
-+MANDIR=/usr/share/man/man6
-+#
-+#-INCLUDE cross-pre2.370
-+#
-+
-+#
-+#-INCLUDE gbdates-pre.370
-+#
-+
-+#-POST
-+
-+#
-+#-INCLUDE gbdates-post.370
-+#
-+#
-+#-INCLUDE multisnd-post.370
-+#
-+
-+ifdef MAKEFILE_TOP
-+ifeq ($(MAKELEVEL),0)
-+.PHONY: checkmakefiles
-+checkmakefiles:
-+	@$(MAKE) -f sys/unix/Makefile.check \
-+		HINTSFILE="$(HINTSFILE)" HINTSINCLFILES="$(HINTSINCLFILES)"
-+endif
-+endif
-+
-+ifdef WANT_LIBNH
-+$(TARGETPFX)libnh.a: $(HOBJ) $(LIBNHSYSOBJ) ../lib/lua/liblua-$(LUA_VERSION).a
-+	$(AR) rcs $@ $(HOBJ) $(LIBNHSYSOBJ) ../lib/lua/liblua-$(LUA_VERSION).a
-+	@echo "$@ built."
-+$(TARGETPFX)libnhmain.o : ../sys/libnh/libnhmain.c $(HACK_H)
-+	$(CC) $(CFLAGS) -c -o$@ $<
-+#dependency tool added this to Makefile.src
-+#$(TARGETPFX)winshim.o : ../win/shim/winshim.c $(HACK_H)
-+#	$(CC) $(CFLAGS) -c -o$@ $<
-+endif  # WANT_LIBNH
-+
-+#
-+#-INCLUDE cross-post.370
-+#
+ ifdef WANT_WIN_X11
+ WINCFLAGS += -DX11_GRAPHICS
+ WINSRC += $(WIINX11SRC)
 --- NetHack-NetHack-3.7.0_WIP/sys/windows/GNUmakefile	2025-09-01 18:37:38.089416243 -0500
 +++ nethack/sys/windows/GNUmakefile	2025-09-01 13:36:33.153226446 -0500
 @@ -28,7 +28,7 @@

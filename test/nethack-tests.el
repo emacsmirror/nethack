@@ -78,7 +78,7 @@
                                                           (process-send-string
                                                            proc
                                                            (string-trim-right
-                                                            (shell-command-to-string nethack-program) " ([[:ascii:]]*"))))))
+                                                            (shell-command-to-string (concat nethack-program " -wlisp")) " ([[:ascii:]]*"))))))
 
 (ert-deftest nethack-test-remote ()
   (skip-unless (executable-find "nc"))

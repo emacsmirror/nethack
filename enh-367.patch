@@ -34,19 +34,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   */
  
  /* MAC also means MAC windows */
-@@ -115,6 +116,12 @@
- #define HACKDIR "\\nethack"
- #endif
- 
-+#ifdef LISP_GRAPHICS
-+#ifndef DEFAULT_WINDOW_SYS
-+#define DEFAULT_WINDOW_SYS "lisp"
-+#endif
-+#endif
-+
- #ifndef DEFAULT_WINDOW_SYS
- #define DEFAULT_WINDOW_SYS "tty"
- #endif
 --- NetHack-NetHack-3.6.7_Released/include/patchlevel.h	2023-02-15 15:52:57.000000000 -0600
 +++ nethack/include/patchlevel.h	2025-03-31 01:38:34.622526952 -0500
 @@ -16,6 +16,8 @@
@@ -235,91 +222,43 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  wizard.o: wizard.c $(HACK_H) ../include/qtext.h
  worm.o: worm.c $(HACK_H) ../include/lev.h
  worn.o: worn.c $(HACK_H)
---- /dev/null	2025-03-31 01:41:49.285570000 -0500
-+++ nethack/sys/unix/hints/lisp	2025-03-31 01:38:41.266594125 -0500
-@@ -0,0 +1,62 @@
-+#
-+# NetHack 3.6  linux $NHDT-Date: 1432512814 2015/05/25 00:13:34 $  $NHDT-Branch: master $:$NHDT-Revision: 1.12 $
-+# Copyright (c) Kenneth Lorber, Kensington, Maryland, 2007.
-+# NetHack may be freely redistributed.  See license for details.
-+#
-+#-PRE
-+# Linux hints file
-+# This hints file provides a single-user lisp build for Linux, taking its PREFIX
-+# from the environment to determine the installation location.
-+
-+#PREFIX=/usr
-+#PREFIX=$(wildcard ~)/nh/install
-+HACKDIR=$(PREFIX)/games/lib/$(GAME)dir
-+SHELLDIR = $(PREFIX)/games
-+INSTDIR = $(HACKDIR)
-+VARDIR = $(HACKDIR)
-+
-+POSTINSTALL=cp -n sys/unix/sysconf $(INSTDIR)/sysconf; $(CHOWN) $(GAMEUID) $(INSTDIR)/sysconf; $(CHGRP) $(GAMEGRP) $(INSTDIR)/sysconf; chmod $(VARFILEPERM) $(INSTDIR)/sysconf;
-+
-+CFLAGS=-g -O -I../include -DNOTPARMDECL
-+CFLAGS+=-DDLB
-+CFLAGS+=-DCOMPRESS=\"/bin/gzip\" -DCOMPRESS_EXTENSION=\".gz\"
-+CFLAGS+=-DSYSCF -DSYSCF_FILE=\"$(HACKDIR)/sysconf\" -DSECURE
-+CFLAGS+=-DTIMED_DELAY
-+CFLAGS+=-DHACKDIR=\"$(HACKDIR)\"
-+CFLAGS+=-DDUMPLOG
-+CFLAGS+=-DCONFIG_ERROR_SECURE=FALSE
-+CFLAGS+=-DNOTTYGRAPHICS -DLISP_GRAPHICS
-+#CFLAGS+=-DEXTRA_SANITY_CHECKS
-+#CFLAGS+=-DEDIT_GETLIN
-+CFLAGS+=-DSCORE_ON_BOTL
-+CFLAGS+=-DEXP_ON_BOTL
-+#CFLAGS+=-DMSGHANDLER
-+#CFLAGS+=-DTTY_TILES_ESCCODES
-+
-+# Debugging
-+CFLAGS+=-g
-+
-+LINK=$(CC)
-+# Only needed for GLIBC stack trace:
-+LFLAGS=-rdynamic
-+
-+WINSRC = $(WINLISPSRC)
-+WINOBJ = $(WINLISPOBJ)
-+WINLIB = $(WINLISPLIB)
-+
-+# if TTY_TILES_ESCCODES
-+#WINSRC += tile.c
-+#WINOBJ += tile.o
-+
-+WINTTYLIB=-lncurses -ltinfo
-+
-+CHOWN=true
-+CHGRP=true
-+
-+VARDIRPERM = 0775
-+VARFILEPERM = 0664
-+#GAMEPERM = 0755
-+GAMEPERM = 04755
-+FILEPERM = 0664
-+EXEPERM  = 0775
-+DIRPERM  = 0775
+--- NetHack-NetHack-3.6.7_Released/sys/unix/hints/linux	2025-03-31 01:41:49.285570000 -0500
++++ nethack/sys/unix/hints/linux	2025-03-31 01:38:41.266594125 -0500
+@@ -29,6 +29,7 @@
+ CFLAGS+=-DDUMPLOG
+ CFLAGS+=-DCONFIG_ERROR_SECURE=FALSE
+ CFLAGS+=-DCURSES_GRAPHICS
++CFLAGS+=-DLISP_GRAPHICS
+ #CFLAGS+=-DEXTRA_SANITY_CHECKS
+ #CFLAGS+=-DEDIT_GETLIN
+ #CFLAGS+=-DSCORE_ON_BOTL
+@@ -39,9 +40,9 @@
+ # Only needed for GLIBC stack trace:
+ LFLAGS=-rdynamic
+ 
+-WINSRC = $(WINTTYSRC) $(WINCURSESSRC)
+-WINOBJ = $(WINTTYOBJ) $(WINCURSESOBJ)
+-WINLIB = $(WINTTYLIB) $(WINCURSESLIB)
++WINSRC = $(WINTTYSRC) $(WINCURSESSRC) $(WINLISPSRC)
++WINOBJ = $(WINTTYOBJ) $(WINCURSESOBJ) $(WINLISPOBJ)
++WINLIB = $(WINTTYLIB) $(WINCURSESLIB) $(WINLISPLIB)
+ 
+ # if TTY_TILES_ESCCODES
+ #WINSRC += tile.c
 --- NetHack-NetHack-3.6.7_Released/util/makedefs.c	2023-02-15 15:52:57.000000000 -0600
 +++ nethack/util/makedefs.c	2025-03-31 01:38:34.626829609 -0500
-@@ -1233,8 +1233,16 @@
- #endif
- #endif
+@@ -1235,6 +1235,10 @@
  #else
-+#ifdef LISP_GRAPHICS
-+    Strcpy(statusbuf, " lisp-patch");
-+#ifdef LISP_VERSION
-+    Strcat(statusbuf, " ");
-+    Strcat(statusbuf, LISP_VERSION);
-+#endif
-+#else
      statusbuf[0] = '\0';
  #endif
++#ifdef LISP_GRAPHICS
++    Strcat(statusbuf, " lisp-patch ");
++    Strcat(statusbuf, LISP_VERSION);
 +#endif
  
      subbuf[0] = '\0';
  #ifdef PORT_SUB_ID
-@@ -1762,6 +1770,9 @@
+@@ -1762,6 +1766,9 @@
  #ifdef MAC /* defunct OS 9 interface */
      { "mac", "Mac" },
  #endif

@@ -458,7 +458,7 @@ installation."
   :type '(string)
   :group 'nethack)
 
-(defcustom nethack-program-args nil
+(defcustom nethack-program-args '("-wlisp")
   "Arguments to pass to `nethack-program'."
   :type '(repeat string)
   :group 'nethack)
@@ -585,7 +585,9 @@ The source is saved as nethack.tar.gz within the
    (concat nethack-el-directory "enh-" (nethack-version-nodots) ".patch"))
   ;; patches that do not relate to the lisp port but are otherwise required to build/run nethack go here
   ;; we can assume we have grep and gzip, but we should not assume they're in /bin
-  (nethack-build--replace-regexp-in-file "sys/unix/hints/lisp" "/bin/gzip" (executable-find "gzip"))
+  (let ((hint-file (concat "sys/unix/hints/linux" (when (string= nethack-version "3.7.0") ".370"))))
+    (nethack-build--replace-regexp-in-file hint-file "/bin/gzip" (executable-find "gzip"))
+    (nethack-build--replace-regexp-in-file hint-file "\\(LIBCFLAGS\\+=-DSIG_RET_TYPE=__sighandler_t\\)" "#\\1"))
   (nethack-build--replace-regexp-in-file "sys/unix/sysconf" "/bin/grep" (executable-find "grep"))
   (nethack-build--replace-regexp-in-file "sys/unix/sysconf" "GDBPATH" "#GDBPATH")
   (when (eq system-type 'darwin)
@@ -600,7 +602,7 @@ The source is saved as nethack.tar.gz within the
   (pcase system-type
     ('windows-nt (mapcar (lambda (f) (copy-file f (expand-file-name (concat "src/" (file-name-nondirectory f))))) (file-expand-wildcards (expand-file-name "sys/windows/GNUmakefile*"))))
     (_ (let ((default-directory (expand-file-name "sys/unix")))
-         (process-file-shell-command "./setup.sh hints/lisp")))))
+         (process-file-shell-command (concat "./setup.sh hints/linux" (when (string= nethack-version "3.7.0") ".370")))))))
 
 (defun nethack-build-compile ()
   "Compile NetHack with make.
@@ -624,6 +626,8 @@ the ncurses-dev library for your system."
           (concat (when (string= nethack-version "3.7.0")
 		    (format "make fetch%slua && " (if (eq system-type 'windows-nt) "" "-")))
                   "make PREFIX=" nethack-build-directory
+                  (when (string= nethack-version "3.7.0")
+                    " WANT_WIN_TTY=1 WANT_WIN_CURSES=1 WANT_WIN_LISP=1")
                   (unless (eq system-type 'windows-nt) " all install")))
          (compilation-buffer
           (compilation-start compilation-cmd t))) ; Use compilation-shell-minor-mode
