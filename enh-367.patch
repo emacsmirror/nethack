@@ -270,7 +270,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-03-31 01:40:08.895891095 -0500
-@@ -0,0 +1,572 @@
+@@ -0,0 +1,579 @@
++2026-04-07  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (print_timestamp): New function to print a timestamp
++	in the format of the elisp function `current-time`.
++	(read_int): Update accordingly.
++	(read_string): Update accordingly.
++
 +2026-04-07  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_init_nhwindows): Fix double free (caused by
@@ -845,7 +852,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	function.
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-03-31 01:40:08.897561983 -0500
-@@ -0,0 +1,1762 @@
+@@ -0,0 +1,1791 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -858,6 +865,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +#ifdef MSDOS /* from compiler */
 +#define SHORT_FILENAMES
 +#endif
++
++#include <stdint.h>
++#include <sys/stat.h>
++#include <sys/time.h>
++#include <unistd.h>
 +
 +#include "hack.h"
 +#include "winlisp.h"
@@ -1207,6 +1219,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +        printf("\" ");                              \
 +    } while (0)
 +
++struct timeval start;
++void
++print_timestamp()
++{
++    struct timeval now;
++    gettimeofday(&now, NULL);
++
++    now.tv_sec -= start.tv_sec;
++    now.tv_usec -= start.tv_usec;
++    if (now.tv_usec < 0) {
++        now.tv_sec--;
++        now.tv_usec += 1000000;
++    }
++
++    printf("; (%u %u %u 0)\n", (uint32_t) (now.tv_sec >> 16),
++           (uint32_t) (now.tv_sec & 0xFFFF), (uint32_t) now.tv_usec);
++}
++
 +static const char *
 +attr_to_string(attr)
 +int attr;
@@ -1276,9 +1306,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +{
 +    char line[BUFSZ];
 +    int rv;
++    print_timestamp();
 +    printf("%s> ", prompt);
 +    fflush(stdout);
 +    fgets(line, BUFSZ, stdin);
++    printf("\n");
 +    rv = sscanf(line, "%d", i);
 +    if (rv != 1)
 +        *i = -1;
@@ -1298,11 +1330,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +    *str = malloc(size);
 +    (*str)[0] = '\0';
 +
++    print_timestamp();
 +    printf("%s> ", prompt);
 +    fflush(stdout);
 +    do {
 +        /* Read the string */
 +        rv = fgets(tmp, BUFSZ, stdin);
++        printf("\n");
 +        if (rv == NULL)
 +            break;
 +
@@ -2362,6 +2396,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +    char verbuf[BUFSZ];
 +    char *need_options_file_p;
 +    int i;
++
++    gettimeofday(&start, NULL);
 +
 +    printf("\n;; START LISP\n");
 +

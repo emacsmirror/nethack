@@ -77,8 +77,10 @@
                         :sentinel (lambda (proc status) (when (eq (process-status proc) 'open)
                                                           (process-send-string
                                                            proc
-                                                           (string-trim-right
-                                                            (shell-command-to-string (concat nethack-program " -wlisp")) " ([[:ascii:]]*"))))))
+                                                           (replace-regexp-in-string
+                                                            "\\(string> \\)[[:ascii:]]*"
+                                                            "\\1"
+                                                            (shell-command-to-string (concat nethack-program " -wlisp"))))))))
 
 (ert-deftest nethack-test-remote ()
   (skip-unless (executable-find "nc"))

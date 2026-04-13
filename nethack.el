@@ -867,12 +867,10 @@ PROC is the process object and MSG is the exit message."
     (when raw-print-buffer
       (switch-to-buffer raw-print-buffer))))
 
-(defun nethack-log (string &optional print-timestamp)
+(defun nethack-log (string)
   (with-current-buffer (get-buffer-create nethack-log-buffer)
     (goto-char (point-max))
     (insert (string-trim string))
-    (when print-timestamp
-      (insert (format " ; %s" (time-subtract (current-time) nethack-start-time))))
     (insert "\n")))
 
 (defconst nethack--lisp-header "^;; START LISP$")
@@ -906,7 +904,7 @@ delete the contents, perhaps logging the text."
     (forward-line 0)
     (when (looking-at nethack-prompt-regexp)
       (let ((prompt (match-string 1)))
-        (nethack-log (buffer-substring (point-min) (point)) t)
+        (nethack-log (buffer-substring (point-min) (point)))
         (save-restriction
           (narrow-to-region (point-min) (point))
           (nethack-safe-eval-region (point-min) (point-max)))
