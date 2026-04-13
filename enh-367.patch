@@ -270,7 +270,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-03-31 01:40:08.895891095 -0500
-@@ -0,0 +1,562 @@
+@@ -0,0 +1,572 @@
++2026-04-07  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_init_nhwindows): Fix double free (caused by
++	misbehaving TTYs).
++	(read_command): Fix potential sscanf overflow.
++	(lisp_select_menu): Fix potential NULL dereference.
++	(lisp_add_menu): Make lisp_menu_item_list a dynamically sized
++	array to prevent overflow.
++	(lisp_start_menu): Likewise.
++
 +2026-04-02  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_init_nhwindows): Print a header so clients can
@@ -835,7 +845,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	function.
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-03-31 01:40:08.897561983 -0500
-@@ -0,0 +1,1747 @@
+@@ -0,0 +1,1762 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -885,12 +895,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +/* An iterator for assigning accelerator keys. */
 +static char lisp_current_accelerator;
 +
-+/* Helper structures to map menu id's to nethack anything's */
-+// classic C Programmer's disease; the size of menus are unbounded,
-+// but dealing with the lifetime of this array (especially the
-+// 'anything' elements) is annoying.
-+static lisp_menu_item_t lisp_menu_item_list[1000];
++static lisp_menu_item_t *lisp_menu_item_list = NULL;
 +static int lisp_menu_list_num;
++static int lisp_menu_list_max;
 +
 +extern char *enc_stat[];
 +const char *hunger_stat[] = { "Satiated", "",        "Hungry", "Weak",
@@ -1330,7 +1337,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +    *count = 0;
 +    if (read_string(prompt, &buf) == -1)
 +        return -1;
-+    rv = sscanf(buf, "%s %s", cmd, count);
++    rv = sscanf(buf, "%255s %1023s", cmd, count);
 +    free(buf);
 +    if (rv != 2)
 +        *count = 0;
@@ -1857,7 +1864,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +
 +void lisp_start_menu(window) winid window;
 +{
++    if (lisp_menu_item_list) {
++        free((genericptr_t) lisp_menu_item_list);
++        lisp_menu_item_list = NULL;
++    }
 +    lisp_menu_list_num = 0;
++    lisp_menu_list_max = 0;
 +    lisp_current_accelerator = 'a';
 +    lisp_cmd("start-menu", lisp_int(window));
 +}
@@ -1873,6 +1885,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +boolean preselected;        /* item is marked as selected */
 +{
 +    if (identifier->a_void) {
++        if (lisp_menu_list_num >= lisp_menu_list_max) {
++            lisp_menu_list_max =
++                lisp_menu_list_max ? lisp_menu_list_max * 2 : 16;
++            lisp_menu_item_list = (lisp_menu_item_t *) realloc(
++                lisp_menu_item_list,
++                lisp_menu_list_max * sizeof(lisp_menu_item_t));
++            if (lisp_menu_item_list == NULL)
++                panic(
++                    "Memory allocation failure; cannot grow menu item list");
++        }
 +        lisp_menu_item_list[lisp_menu_list_num].identifier = *identifier;
 +        if (ch == 0) {
 +            ch = lisp_menu_item_list[lisp_menu_list_num].accelerator =
@@ -1971,6 +1993,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +
 +        page = atoi(token);
 +        token = strtok(NULL, delim);
++        if (token == NULL)
++            break;
 +        /* assign the item ID */
 +        if (!lisp_get_menu_identifier(page, atoi(token),
 +                                      &(*menu_list)[size - 1].item)) {
@@ -1981,6 +2005,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +
 +        /* Read the item count */
 +        token = strtok(NULL, delim);
++        if (token == NULL)
++            break;
 +        (*menu_list)[size - 1].count = atoi(token);
 +
 +        /* read the next item ID */
@@ -2340,28 +2366,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +    printf("\n;; START LISP\n");
 +
 +    lisp_cmd("need-options-file", );
-+    read_string("string", &need_options_file_p);
 +
-+    if (!strcmp(need_options_file_p, "t")) {
-+        char buf[BUFSZ];
-+        FILE *fp = fopen(configfile, "r");
++    if (read_string("string", &need_options_file_p) != -1) {
++        if (!strcmp(need_options_file_p, "t")) {
++            char buf[BUFSZ];
++            FILE *fp = fopen(configfile, "r");
 +
-+        if (fp == NULL) {
-+            Sprintf(buf, "cannot open options file %s", configfile);
-+            lisp_cmd("receive-file", lisp_string(buf); lisp_string("error"););
-+            ;
-+        } else {
-+            while (fgets(buf, BUFSZ, fp) != NULL) {
-+                lisp_cmd("receive-file", lisp_string(buf););
-+                ;
++            if (fp == NULL) {
++                Sprintf(buf, "cannot open options file %s", configfile);
++                lisp_cmd("receive-file", lisp_string(buf);
++                         lisp_string("error"););
++            } else {
++                while (fgets(buf, BUFSZ, fp) != NULL) {
++                    lisp_cmd("receive-file", lisp_string(buf););
++                }
++
++                fclose(fp);
++                lisp_cmd("receive-file", lisp_string(""); lisp_t;);
 +            }
-+
-+            fclose(fp);
-+            lisp_cmd("receive-file", lisp_string(""); lisp_t;);
-+            ;
 +        }
++        free(need_options_file_p);
 +    }
-+    free(need_options_file_p);
 +
 +    /* Print each command-line option, constructing a list of strings */
 +    lisp_cmd("init-nhwindows", lisp_string(getversionstring(verbuf));
