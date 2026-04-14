@@ -675,7 +675,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #ifdef RUNTIME_PASTEBUF_SUPPORT
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,612 @@
+@@ -0,0 +1,619 @@
++2026-04-13  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_update_inventory): Now unconditionally sends
++	inventory data.  This means clients are responsible for
++	implementing perm_invent, but it also means clients without
++	perm_invent can access up-to-date inventory data.
++
 +2026-04-07  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (print_timestamp): New function to print a timestamp
@@ -1290,7 +1297,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	function.
 --- /dev/null	2025-08-24 10:32:36.147906000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
-@@ -0,0 +1,1808 @@
+@@ -0,0 +1,1806 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -2781,10 +2788,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +void
 +lisp_update_inventory(int arg UNUSED)
 +{
-+    if (iflags.perm_invent) {
-+        lisp_cmd("update-inventory", );
-+        display_inventory(NULL, FALSE);
-+    }
++    lisp_cmd("update-inventory", );
++    display_inventory(NULL, FALSE);
 +}
 +
 +int

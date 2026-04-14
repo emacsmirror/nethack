@@ -658,9 +658,11 @@ Do not edit the value of this variable.  Instead, change the value of
 
 (defvar nethack-inventory-need-update nil
   "If non-nil, at the next command prompt, update the menu.")
+(defvar nethack--inventory-skip-select nil)
 (defvar nethack--inventory nil)
 
-(defun nethack-nhapi-update-inventory ())
+(defun nethack-nhapi-update-inventory ()
+  (setq nethack--inventory-skip-select t))
 
 (defun nethack-nhapi-doprev-message ()
   (save-selected-window
@@ -681,8 +683,6 @@ Do not edit the value of this variable.  Instead, change the value of
   (setq nethack-directory (file-name-directory executable))
   (when (and (nethack-options-set-p 'tiled_map) (null nethack-use-tiles))
     (message "You have OPTIONS=tiled_map set in your nethackrc; consider setting nethack-use-tiles"))
-  (when (and nethack-want-completing-read (not (nethack-options-set-p 'perm_invent)))
-    (message "nethack-want-completing-read does not function properly without OPTIONS=perm_invent"))
   (setq nethack-nhapi-print-glyph--previous-ch t)
   (setq nethack--inventory nil)
   ;; clean up old buffers
@@ -1049,7 +1049,8 @@ displayed."
 accelerator that will be used in unassigned menus.")
 
 (defun nethack-nhapi-start-menu (menuid)
-  (when (= menuid 4)
+  (when-let* ((inventory-menuid (car (rassoc nethack-inventory-buffer nethack-menu-buffer-table)))
+              ((= menuid inventory-menuid)))
     (setq nethack--inventory nil)
     (setq nethack-inventory-need-update t))
   (with-current-buffer (nethack-menu-buffer menuid)
@@ -1116,40 +1117,41 @@ the menu is dismissed."
   (let ((buffer (nethack-menu-buffer menuid)))
     (unless buffer (error "No such menuid: %d" menuid))
     (when nethack-inventory-need-update
-        (progn
-          (setq nethack-inventory-need-update nil)
-          ;; transpose from '((CATEGORY (ACCEL . NAME))) to '((ACCEL NAME . CATEGORY))
-          (setq nethack--inventory
-                (reverse (mapcan
-                          (lambda (category)
-                            (mapcar (lambda (item)
-                                      `(,(car item) ,(cdr item) . ,(car category)))
-                                    (cdr category)))
-                          nethack--inventory)))
-          (nethack-send nil)))
-      (progn
-        (unless nethack-active-menu-buffer
-          (setq nethack-window-configuration (current-window-configuration)))
-        (if (one-window-p)
-            (switch-to-buffer buffer)
-          ;; Use the window displaying the message buffer for the menu
-          (if-let ((window (or (and nethack-inventory-buffer
-                                    (get-buffer-window nethack-inventory-buffer))
-                               (and nethack-message-buffer
-                                    (get-buffer-window nethack-message-buffer)))))
-              (progn
-                (select-window window t)
-                (switch-to-buffer buffer t t))
-            (switch-to-buffer-other-window buffer t))
-          ;; make window larger, if necessary
-          (let ((bh (nethack-window-buffer-height (selected-window)))
-                (wh (- (window-height) 1)))
-            (when (> bh wh)
-              (enlarge-window (- bh wh)))))
-        (nethack-menu-mode how)
-        (goto-char (point-min))
-        (message "Displaying menu")
-        (setq nethack-active-menu-buffer buffer))))
+      ;; this fires whenever the menu is an inventory (regardless of whether it should be displayed)
+      (setq nethack-inventory-need-update nil)
+      ;; transpose from '((CATEGORY (ACCEL . NAME))) to '((ACCEL NAME . CATEGORY))
+      (setq nethack--inventory
+            (reverse (mapcan
+                      (lambda (category)
+                        (mapcar (lambda (item)
+                                  `(,(car item) ,(cdr item) . ,(car category)))
+                                (cdr category)))
+                      nethack--inventory))))
+    (if nethack--inventory-skip-select
+        ;; this indicates the inventory was updated but should not be displayed
+        (nethack-send (setq nethack--inventory-skip-select nil))
+      (unless nethack-active-menu-buffer
+        (setq nethack-window-configuration (current-window-configuration)))
+      (if (one-window-p)
+          (switch-to-buffer buffer)
+        ;; Use the window displaying the message buffer for the menu
+        (if-let ((window (or (and nethack-inventory-buffer
+                                  (get-buffer-window nethack-inventory-buffer))
+                             (and nethack-message-buffer
+                                  (get-buffer-window nethack-message-buffer)))))
+            (progn
+              (select-window window t)
+              (switch-to-buffer buffer t t))
+          (switch-to-buffer-other-window buffer t))
+        ;; make window larger, if necessary
+        (let ((bh (nethack-window-buffer-height (selected-window)))
+              (wh (- (window-height) 1)))
+          (when (> bh wh)
+            (enlarge-window (- bh wh)))))
+      (nethack-menu-mode how)
+      (goto-char (point-min))
+      (message "Displaying menu")
+      (setq nethack-active-menu-buffer buffer))))
 
 (defmacro nethack-nhapi--let*-if (condition then-bindings else-bindings &rest body)
   `(if ,condition
